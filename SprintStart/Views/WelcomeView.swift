@@ -18,13 +18,15 @@ struct WelcomeView: View {
                     Spacer()
                     
                     // App logo
+                    // Have dark and light in case of future logo change
                     if let logo = UIImage(named: colorScheme == .dark ? "DarkLogo" : "LightLogo") {
                         Image(uiImage: logo)
                             .resizable()
                             .scaledToFit()
                             .frame(width: 150, height: 150)
+                            .padding(.bottom)
                             .onAppear {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + Double.random(in: 0.2...0.75)) {
                                     withAnimation {
                                         welcomeScreen = false
                                     }
@@ -32,9 +34,10 @@ struct WelcomeView: View {
                             }
                     } else {
                         Text("Logo not found")
-                            .foregroundColor(.red)
+                            .font(.title2)
+                            .foregroundColor(.blue)
                             .onAppear {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + Double.random(in: 0.2...0.75)) {
                                     withAnimation {
                                         welcomeScreen = false
                                     }

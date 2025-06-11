@@ -20,12 +20,12 @@ struct StarterView: View {
     @State private var timer: Timer?
     
     private let synthesizer = AVSpeechSynthesizer()
-    private var starterGunSound: AVAudioPlayer?
+    private var starterSound: AVAudioPlayer?
     
     init() {
         // Load starter gun sound
         if let soundURL = Bundle.main.url(forResource: "starter_gun", withExtension: "mp3") {
-            starterGunSound = try? AVAudioPlayer(contentsOf: soundURL)
+            starterSound = try? AVAudioPlayer(contentsOf: soundURL)
         }
     }
     
@@ -80,7 +80,6 @@ struct StarterView: View {
                         Picker("", selection: $markSeconds) {
                             ForEach(5..<31) { sec in
                                 Text("\(sec) sec").tag(sec)
-                                    .foregroundStyle(Color.primary)
                             }
                         }
                         .onChange(of: markSeconds) {
@@ -103,7 +102,6 @@ struct StarterView: View {
                             ForEach(Array(stride(from: 1.25, through: 3.0, by: 0.25)), id: \.self) { sec in
                                 Text(String(format: "%.2f sec", sec))
                                     .tag(sec)
-                                    .foregroundStyle(Color.primary)
                             }
                         }
                         .onChange(of: startSeconds) {
@@ -225,9 +223,8 @@ struct StarterView: View {
                     synthesizer.speak(set)
                     
                     // Bang
-                    // let randomDelay = Double.random(in: 1.5...2.25)
                     DispatchQueue.main.asyncAfter(deadline: .now() + startDelay) {
-                        self.starterGunSound?.play()
+                        self.starterSound?.play()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                             self.canStart = true
                             self.started = false
@@ -240,12 +237,12 @@ struct StarterView: View {
     
     // Load the user selections from UserDefaults
     private func loadData() {
-        if let data = UserDefaults.standard.data(forKey: "firstDelay"),
+        if let data = UserDefaults.standard.data(forKey: "delay"),
            let decoded = try? JSONDecoder().decode(StarterData.self, from: data) {
             starterData = decoded
-            markSeconds = starterData?.firstDelay ?? 20
-            startSeconds = starterData?.secondDelay ?? 1.75
-            selectedVariability = starterData?.variability ?? "Low (±0.25 sec)"
+            markSeconds = decoded.firstDelay
+            startSeconds = decoded.secondDelay
+            selectedVariability = decoded.variability
         }
     }
     
@@ -253,14 +250,8 @@ struct StarterView: View {
     private func saveData() {
         starterData = StarterData(firstDelay: markSeconds, secondDelay: startSeconds, variability: selectedVariability)
         if let encoded = try? JSONEncoder().encode(starterData) {
-            UserDefaults.standard.set(encoded, forKey: "firstDelay")
-        }
-        if let encoded = try? JSONEncoder().encode(starterData) {
-            UserDefaults.standard.set(encoded, forKey: "secondDelay")
-        }
-        if let encoded = try? JSONEncoder().encode(starterData) {
-            UserDefaults.standard.set(encoded, forKey: "variability")
-        }
+                UserDefaults.standard.set(encoded, forKey: "delay")
+            }
     }
     
     private func startCountdownTimer() {
