@@ -22,12 +22,22 @@ class SettingsModel: ObservableObject {
 struct SettingsView: View {
     @StateObject private var settings = SettingsModel()
     @State private var settingsData: SettingsData?
-    @State private var voice = ["EN Female", "EN Male", "AUS Female", "AUS Male"]
-    @State private var selectedVoice = "EN Female"
-    @State private var startSound = ["Starter gun", "Electronic starter", "Whistle", "Clap"]
+    @State private var selectedVoice = "US Female"
     @State private var selectedStartSound = "Starter gun"
-    @State private var theme = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple"]
     @State private var selectedTheme = "Blue"
+    
+    let voices: [String: String] = [
+        "US Female": "en-US",
+        "GB Male": "en-GB",
+        "AU Female": "en-AU"
+    ]
+    let starters: [String: String] = [
+        "Starter gun": "starter_gun",
+        "Electronic starter": "electronis_starter",
+        "Whistle": "short_whistle",
+        "Clap": "single_clap"
+    ]
+    let themes = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple"]
     
     var body: some View {
         NavigationStack {
@@ -39,7 +49,7 @@ struct SettingsView: View {
                         .fontWeight(.bold)
                 }
             }
-
+            
             VStack {
                 // Voice change
                 Section {
@@ -49,7 +59,7 @@ struct SettingsView: View {
                         Spacer()
                         
                         Picker("", selection: $selectedVoice) {
-                            ForEach(voice, id: \.self) { select in
+                            ForEach(Array(voices.keys), id: \.self) { select in
                                 Text(select)
                             }
                         }
@@ -70,7 +80,7 @@ struct SettingsView: View {
                         Spacer()
                         
                         Picker("", selection: $selectedStartSound) {
-                            ForEach(startSound, id: \.self) { select in
+                            ForEach(Array(starters.keys), id: \.self) { select in
                                 Text(select)
                             }
                         }
@@ -104,7 +114,7 @@ struct SettingsView: View {
                         Spacer()
                         
                         Picker("", selection: $selectedTheme) {
-                            ForEach(theme, id: \.self) { select in
+                            ForEach(themes, id: \.self) { select in
                                 Text(select)
                             }
                         }
@@ -143,8 +153,12 @@ struct SettingsView: View {
     
     // Save the user selections to UserDefaults
     private func saveData() {
-        settingsData = SettingsData(voice: selectedVoice, starter: selectedStartSound, theme: selectedTheme)
-        if let encoded = try? JSONEncoder().encode(settingsData) {
+        let newSettings = SettingsData(
+            voice: selectedVoice,
+            starter: selectedStartSound,
+            theme: selectedTheme
+        )
+        if let encoded = try? JSONEncoder().encode(newSettings) {
             UserDefaults.standard.set(encoded, forKey: "settings")
         }
     }

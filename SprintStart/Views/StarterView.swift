@@ -18,16 +18,20 @@ struct StarterView: View {
     @State private var starterData: StarterData?
     @State private var onYourMarksRemainingTime: Double = 0
     @State private var timer: Timer?
+    @State private var starterSound: AVAudioPlayer?
     
+    let voices: [String: String] = [
+        "US Female": "en-US",
+        "GB Male": "en-GB",
+        "AU Female": "en-AU"
+    ]
+    let starters: [String: String] = [
+        "Starter gun": "starter_gun",
+        "Electronic starter": "electronic_starter",
+        "Whistle": "short_whistle",
+        "Clap": "single_clap"
+    ]
     private let synthesizer = AVSpeechSynthesizer()
-    private var starterSound: AVAudioPlayer?
-    
-    init() {
-        // Load starter gun sound
-        if let soundURL = Bundle.main.url(forResource: "starter_gun", withExtension: "mp3") {
-            starterSound = try? AVAudioPlayer(contentsOf: soundURL)
-        }
-    }
     
     var body: some View {
         NavigationStack {
@@ -193,6 +197,27 @@ struct StarterView: View {
     // This plays all the sounds and text that is needed based on user input
     private func playStarterSequence(canStart: Bool, seconds: Int) {
         if canStart {
+            // Load voice
+            var selectedVoice: String {
+                if let data = UserDefaults.standard.data(forKey: "settings"),
+                   let decoded = try? JSONDecoder().decode(SettingsData.self, from: data) {
+                    return voices[decoded.voice] ?? "en-US"
+                }
+                return "en-US"
+            }
+            
+            // Load starter sound
+            var selectedStarter: String {
+                if let data = UserDefaults.standard.data(forKey: "settings"),
+                   let decoded = try? JSONDecoder().decode(SettingsData.self, from: data) {
+                    return starters[decoded.starter] ?? "starter_gun"
+                }
+                return "starter_gun"
+            }
+            if let soundURL = Bundle.main.url(forResource: selectedStarter, withExtension: "mp3") {
+                starterSound = try? AVAudioPlayer(contentsOf: soundURL)
+            }
+            
             var startDelay: Double
             
             if selectedVariability == "Low (±0.25 sec)" {
@@ -210,7 +235,7 @@ struct StarterView: View {
             
             // On your mark
             let mark = AVSpeechUtterance(string: "On your marks")
-            mark.voice = AVSpeechSynthesisVoice(language: "en-US")
+            mark.voice = AVSpeechSynthesisVoice(language: selectedVoice)
             synthesizer.speak(mark)
             
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(seconds)) {
@@ -219,7 +244,7 @@ struct StarterView: View {
                 // Set
                 DispatchQueue.main.asyncAfter(deadline: .now()) {
                     let set = AVSpeechUtterance(string: "Set")
-                    set.voice = AVSpeechSynthesisVoice(language: "en-US")
+                    set.voice = AVSpeechSynthesisVoice(language: selectedVoice)
                     synthesizer.speak(set)
                     
                     // Bang
@@ -250,8 +275,8 @@ struct StarterView: View {
     private func saveData() {
         starterData = StarterData(firstDelay: markSeconds, secondDelay: startSeconds, variability: selectedVariability)
         if let encoded = try? JSONEncoder().encode(starterData) {
-                UserDefaults.standard.set(encoded, forKey: "delay")
-            }
+            UserDefaults.standard.set(encoded, forKey: "delay")
+        }
     }
     
     private func startCountdownTimer() {
