@@ -29,7 +29,7 @@ class ThemeData: ObservableObject {
         case "Green": return .green
         case "Blue": return .blue
         case "Indigo": return .indigo
-        case "Pink": return Color(red: 9.9, green: 0.7, blue: 0.9)
+        case "Pink": return Color(red: 0.99, green: 0.7, blue: 0.9)
         case "Black/White": return .primary
         default: return .blue
         }

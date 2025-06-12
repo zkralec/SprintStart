@@ -151,9 +151,13 @@ struct StarterView: View {
                             started = true
                         }) {
                             HStack {
-                                Image(systemName: "play.circle")
-                                Text("Start")
+                                Label("Start", systemImage: "play.circle")
+                                    .font(.headline)
                             }
+                            .frame(maxWidth: 150)
+                            .padding(.vertical,14)
+                            .background(theme.selectedColor.opacity(0.25))
+                            .cornerRadius(12)
                         }
                         
                         Spacer()
@@ -175,9 +179,13 @@ struct StarterView: View {
                             print("Saving all options") // Debug
                         }) {
                             HStack {
-                                Image(systemName: "trash.circle")
-                                Text("Reset to defaults")
+                                Label("Reset to defaults", systemImage: "trash.circle")
+                                    .font(.subheadline)
                             }
+                            .frame(maxWidth: 300)
+                            .padding(.vertical,8)
+                            .background(theme.selectedColor.opacity(0.25))
+                            .cornerRadius(12)
                         }
                         
                         Spacer()
