@@ -20,6 +20,8 @@ struct StarterView: View {
     @State private var timer: Timer?
     @State private var starterSound: AVAudioPlayer?
     
+    @EnvironmentObject var theme: ThemeData
+    
     let voices: [String: String] = [
         "US Female": "en-US",
         "GB Male": "en-GB",
@@ -66,7 +68,7 @@ struct StarterView: View {
                             totalTime: Double(markSeconds),
                             remainingTime: onYourMarksRemainingTime,
                             lineWidth: 10,
-                            ringColor: .blue
+                            ringColor: theme.selectedColor
                         )
                         .padding()
                     }
@@ -152,7 +154,6 @@ struct StarterView: View {
                                 Image(systemName: "play.circle")
                                 Text("Start")
                             }
-                            .foregroundColor(.blue)
                         }
                         
                         Spacer()
@@ -177,7 +178,6 @@ struct StarterView: View {
                                 Image(systemName: "trash.circle")
                                 Text("Reset to defaults")
                             }
-                            .foregroundColor(.blue)
                         }
                         
                         Spacer()

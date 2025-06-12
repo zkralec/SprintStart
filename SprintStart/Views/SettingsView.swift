@@ -21,10 +21,13 @@ class SettingsModel: ObservableObject {
 
 struct SettingsView: View {
     @StateObject private var settings = SettingsModel()
+    
     @State private var settingsData: SettingsData?
     @State private var selectedVoice = "US Female"
     @State private var selectedStartSound = "Starter gun"
     @State private var selectedTheme = "Blue"
+    
+    @EnvironmentObject var theme: ThemeData
     
     let voices: [String: String] = [
         "US Female": "en-US",
@@ -37,7 +40,7 @@ struct SettingsView: View {
         "Whistle": "short_whistle",
         "Clap": "single_clap"
     ]
-    let themes = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple"]
+    let themes = ["Red", "Orange", "Yellow", "Green", "Blue", "Indigo", "Pink", "Black/White"]
     
     var body: some View {
         NavigationStack {
@@ -120,6 +123,7 @@ struct SettingsView: View {
                         }
                         .onChange(of: selectedTheme) {
                             saveData()
+                            theme.selectedColor = ThemeData.colorNames(selectedTheme)
                             print("Saving theme of \(selectedTheme)") // Debug
                         }
                     }
