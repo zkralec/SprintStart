@@ -162,6 +162,7 @@ struct StarterView: View {
                         
                         Spacer()
                     }
+                    .padding(.top)
                 }
                 
                 Spacer()
@@ -182,14 +183,11 @@ struct StarterView: View {
                                 Label("Reset to defaults", systemImage: "trash.circle")
                                     .font(.subheadline)
                             }
-                            .frame(maxWidth: 300)
-                            .padding(.vertical,8)
-                            .background(theme.selectedColor.opacity(0.25))
-                            .cornerRadius(12)
                         }
                         
                         Spacer()
                     }
+                    .padding(.top,50)
                 }
             }
             .padding(.horizontal, 30)
