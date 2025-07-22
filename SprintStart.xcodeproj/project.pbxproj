@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1424B5342E30078500B9B8A1 /* SprintStartApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1424B5212E30078500B9B8A1 /* SprintStartApp.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		149F35E42DF8D22A0088FB6F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -47,6 +51,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1424B5212E30078500B9B8A1 /* SprintStartApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SprintStartApp.swift; sourceTree = "<group>"; };
 		149F35D22DF8D2280088FB6F /* SprintStart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SprintStart.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		149F35E32DF8D22A0088FB6F /* SprintStartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SprintStartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		149F35ED2DF8D22A0088FB6F /* SprintStartUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SprintStartUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -99,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				149F35D42DF8D2280088FB6F /* SprintStart */,
+				1424B5212E30078500B9B8A1 /* SprintStartApp.swift */,
 				149F35E62DF8D22A0088FB6F /* SprintStartTests */,
 				149F35F02DF8D22A0088FB6F /* SprintStartUITests */,
 				149F35D32DF8D2280088FB6F /* Products */,
@@ -263,6 +269,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1424B5342E30078500B9B8A1 /* SprintStartApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

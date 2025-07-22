@@ -133,9 +133,9 @@ struct SettingsView: View {
             }
             .frame(maxHeight: 200)
             .padding(30)
-            .onAppear {
-                loadData()
-            }
+        }
+        .onAppear {
+            loadData()
         }
         .onDisappear {
             saveData()

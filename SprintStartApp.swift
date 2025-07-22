@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// If not able to start on iPhone (ex. extracting error), restart computer
 @main
 struct SprintStartApp: App {
     @StateObject private var settings = SettingsModel()
