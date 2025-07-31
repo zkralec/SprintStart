@@ -34,7 +34,7 @@ struct WelcomeView: View {
                                 }
                                 // Don't show popup if already launched
                                 let hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
-                                showWelcomePopup = hasLaunched // Remove ! if you want to see pop up
+                                showWelcomePopup = !hasLaunched // Remove ! if you want to see pop up
                             }
                         }
                     
