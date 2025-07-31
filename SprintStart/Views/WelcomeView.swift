@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @State private var welcomeScreen = true
+    @State private var showWelcomePopup = false
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var theme: ThemeData
     
@@ -31,6 +32,9 @@ struct WelcomeView: View {
                                 withAnimation {
                                     welcomeScreen = false
                                 }
+                                // Don't show popup if already launched
+                                let hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
+                                showWelcomePopup = hasLaunched // Remove ! if you want to see pop up
                             }
                         }
                     
@@ -42,9 +46,11 @@ struct WelcomeView: View {
                     Spacer()
                 }
             } else {
-                withAnimation {
-                    StarterView()
-                }
+                StarterView()
+                    .fullScreenCover(isPresented: $showWelcomePopup) {
+                        WelcomeModelView(isVisible: $showWelcomePopup)
+                            .environmentObject(theme)
+                    }
             }
         }
     }

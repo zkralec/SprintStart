@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 class SettingsModel: ObservableObject {
     @Published var isDarkMode: Bool {
@@ -21,127 +22,77 @@ class SettingsModel: ObservableObject {
 
 struct SettingsView: View {
     @StateObject private var settings = SettingsModel()
-    
     @State private var settingsData: SettingsData?
     @State private var selectedVoice = "US Female"
     @State private var selectedStartSound = "Starter gun"
     @State private var selectedTheme = "Blue"
+    @State private var player: AVAudioPlayer?
     
     @EnvironmentObject var theme: ThemeData
     
-    let voices: [String: String] = [
-        "US Female": "en-US",
-        "GB Male": "en-GB",
-        "AU Female": "en-AU"
-    ]
-    let starters: [String: String] = [
-        "Starter gun": "starter_gun",
-        "Electronic starter": "electronis_starter",
-        "Whistle": "short_whistle",
-        "Clap": "single_clap"
-    ]
+    let voices = ["US Female", "GB Male", "AU Female"]
+    let starters = ["Starter gun", "Electronic starter", "Whistle", "Clap"]
     let themes = ["Red", "Orange", "Yellow", "Green", "Blue", "Indigo", "Pink", "Black/White"]
     
     var body: some View {
         NavigationStack {
-            VStack {
-                // Title
-                Section {
-                    Text("Settings")
-                        .font(.title)
-                        .fontWeight(.bold)
-                }
-            }
-            
-            VStack {
-                // Voice change
-                Section {
-                    HStack {
-                        Text("Change voice")
-                        
-                        Spacer()
-                        
-                        Picker("", selection: $selectedVoice) {
-                            ForEach(Array(voices.keys), id: \.self) { select in
-                                Text(select)
-                            }
-                        }
-                        .onChange(of: selectedVoice) {
-                            saveData()
-                            print("Saving voice of \(selectedVoice)") // Debug
-                        }
+            Form {
+                // Audio settings
+                Section(header: Text("Audio Settings")) {
+                    Picker("Voice", selection: $selectedVoice) {
+                        ForEach(voices, id: \.self) { Text($0) }
+                    }
+                    .onChange(of: selectedVoice) { saveData() }
+                    
+                    Picker("Starter Sound", selection: $selectedStartSound) {
+                        ForEach(starters, id: \.self) { Text($0) }
+                    }
+                    .onChange(of: selectedStartSound) { saveData() }
+                    
+                    Button("Test Starter Sound") {
+                        playStarterSound()
                     }
                 }
                 
-                Spacer()
-                
-                // Starter sound change
-                Section {
-                    HStack {
-                        Text("Starter sound")
-                        
-                        Spacer()
-                        
-                        Picker("", selection: $selectedStartSound) {
-                            ForEach(Array(starters.keys), id: \.self) { select in
-                                Text(select)
-                            }
-                        }
-                        .onChange(of: selectedStartSound) {
-                            saveData()
-                            print("Saving start sound of \(selectedStartSound)") // Debug
-                        }
+                // Appearance settings
+                Section(header: Text("Appearance")) {
+                    Picker("Theme", selection: $selectedTheme) {
+                        ForEach(themes, id: \.self) { Text($0) }
                     }
-                }
-                
-                Spacer()
-                
-                // Dark/Light mode toggle
-                Section {
+                    .onChange(of: selectedTheme) {
+                        saveData()
+                        theme.selectedColor = ThemeData.colorNames(selectedTheme)
+                    }
+                    
                     Toggle("Dark Mode", isOn: $settings.isDarkMode)
                         .onChange(of: settings.isDarkMode) {
                             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
                                 windowScene.windows.first?.overrideUserInterfaceStyle = settings.isDarkMode ? .dark : .light
                             }
                         }
-                        .padding(.trailing, 15)
                 }
                 
-                Spacer()
-                
-                // Theme color change
+                // Build notes
                 Section {
-                    HStack {
-                        Text("Change theme")
-                        
-                        Spacer()
-                        
-                        Picker("", selection: $selectedTheme) {
-                            ForEach(themes, id: \.self) { select in
-                                Text(select)
-                            }
-                        }
-                        .onChange(of: selectedTheme) {
-                            saveData()
-                            theme.selectedColor = ThemeData.colorNames(selectedTheme)
-                            print("Saving theme of \(selectedTheme)") // Debug
-                        }
+                    EmptyView()
+                } footer: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                        Text("Build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
+                        Text("Developer: Zachary Kralec")
                     }
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 20)
                 }
-                
-                Spacer()
             }
-            .frame(maxHeight: 200)
-            .padding(30)
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .tint(theme.selectedColor)
+            .id(theme.selectedColor.description)
         }
-        .onAppear {
-            loadData()
-        }
-        .onDisappear {
-            saveData()
-        }
-        
-        Spacer()
+        .onAppear(perform: loadData)
+        .onDisappear(perform: saveData)
     }
     
     // Load the user selections from UserDefaults
@@ -164,6 +115,23 @@ struct SettingsView: View {
         )
         if let encoded = try? JSONEncoder().encode(newSettings) {
             UserDefaults.standard.set(encoded, forKey: "settings")
+        }
+    }
+    
+    // Let users test starter sound
+    private func playStarterSound() {
+        let fileName = selectedStartSound == "Clap" ? "single_clap" :
+        selectedStartSound == "Whistle" ? "short_whistle" :
+        selectedStartSound == "Electronic starter" ? "electronic_starter" : "starter_gun"
+        
+        if let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") {
+            do {
+                player = try AVAudioPlayer(contentsOf: url)
+                player?.prepareToPlay()
+                player?.play()
+            } catch {
+                print("Failed to play sound: \(error)")
+            }
         }
     }
 }
