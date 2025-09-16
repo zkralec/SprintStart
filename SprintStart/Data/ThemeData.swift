@@ -5,7 +5,7 @@
 //  Created by Zachary Kralec on 6/12/25.
 //
 
-import SwiftUICore
+import SwiftUI
 
 class ThemeData: ObservableObject {
     @Published var selectedColor: Color = .blue
