@@ -8,134 +8,134 @@
 import SwiftUI
 import AVFoundation
 
-class SettingsModel: ObservableObject {
-    @Published var isDarkMode: Bool {
-        didSet {
-            UserDefaults.standard.set(isDarkMode, forKey: "isDarkMode")
-        }
-    }
-    
-    init() {
-        self.isDarkMode = UserDefaults.standard.bool(forKey: "isDarkMode")
-    }
-}
-
 struct SettingsView: View {
-    @StateObject private var settings = SettingsModel()
-    @State private var settingsData: SettingsData?
-    @State private var selectedVoice = "US Female"
-    @State private var selectedStartSound = "Starter gun"
-    @State private var selectedTheme = "Blue"
+    @EnvironmentObject var appStore: AppSettingsStore
+    @Environment(\.colorScheme) private var colorScheme
     @State private var player: AVAudioPlayer?
-    
-    @EnvironmentObject var theme: ThemeData
-    
-    let voices = ["US Female", "GB Male", "AU Female"]
-    let starters = ["Starter gun", "Electronic starter", "Whistle", "Clap"]
-    let themes = ["Red", "Orange", "Yellow", "Green", "Blue", "Indigo", "Pink", "Black/White"]
-    
+
+    private var themeColor: Color { appStore.settings.theme.accentColor }
+    private var controlTint: Color {
+        if appStore.settings.theme == .blackWhite && colorScheme == .dark {
+            return .black
+        }
+        return themeColor
+    }
+
     var body: some View {
-        NavigationStack {
-            Form {
-                // Audio settings
-                Section(header: Text("Audio Settings")) {
-                    Picker("Voice", selection: $selectedVoice) {
-                        ForEach(voices, id: \.self) { Text($0) }
-                    }
-                    .onChange(of: selectedVoice) { saveData() }
-                    
-                    Picker("Starter Sound", selection: $selectedStartSound) {
-                        ForEach(starters, id: \.self) { Text($0) }
-                    }
-                    .onChange(of: selectedStartSound) { saveData() }
-                    
-                    Button("Test Starter Sound") {
-                        playStarterSound()
-                    }
-                }
-                
-                // Appearance settings
-                Section(header: Text("Appearance")) {
-                    Picker("Theme", selection: $selectedTheme) {
-                        ForEach(themes, id: \.self) { Text($0) }
-                    }
-                    .onChange(of: selectedTheme) {
-                        saveData()
-                        theme.selectedColor = ThemeData.colorNames(selectedTheme)
-                    }
-                    
-                    Toggle("Dark Mode", isOn: $settings.isDarkMode)
-                        .onChange(of: settings.isDarkMode) {
-                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                windowScene.windows.first?.overrideUserInterfaceStyle = settings.isDarkMode ? .dark : .light
-                            }
-                        }
-                }
-                
-                // Build notes
-                Section {
-                    EmptyView()
-                } footer: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                        Text("Build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
-                        Text("Developer: Zachary Kralec")
-                    }
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 20)
+        ScrollView {
+            VStack(spacing: GlassLayout.sectionSpacing) {
+                audioSection
+                appearanceSection
+                aboutSection
+            }
+            .padding(GlassLayout.screenPadding)
+        }
+        .accessibilityIdentifier("settingsScreen")
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .tint(controlTint)
+        .liquidGlassScreenBackground(theme: appStore.settings.theme)
+        .onAppear {
+            try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
+        }
+    }
+
+    private var audioSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Audio")
+                .font(.headline)
+
+            Picker("Voice", selection: $appStore.settings.voice) {
+                ForEach(VoiceOption.allCases) { voice in
+                    Text(voice.displayName).tag(voice)
                 }
             }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .tint(theme.selectedColor)
-            .id(theme.selectedColor.description)
+            .pickerStyle(.menu)
+
+            Picker("Starter Sound", selection: $appStore.settings.starter) {
+                ForEach(StarterSoundOption.allCases) { starter in
+                    Text(starter.displayName).tag(starter)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Toggle(isOn: $appStore.settings.playOverSilent) {
+                Text("Play Over Silent Mode")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+            }
+            .tint(controlTint)
+                .onChange(of: appStore.settings.playOverSilent) {
+                    try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
+                }
+
+            Toggle(isOn: $appStore.settings.hapticsEnabled) {
+                Text("Haptics")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+            }
+            .tint(controlTint)
+
+            Button("Test Starter Sound") {
+                playStarterSound()
+            }
+            .buttonStyle(LiquidGlassButtonStyle(tint: controlTint))
         }
-        .onAppear(perform: loadData)
-        .onDisappear(perform: saveData)
+        .liquidGlassCard()
     }
-    
-    // Load the user selections from UserDefaults
-    private func loadData() {
-        if let data = UserDefaults.standard.data(forKey: "settings"),
-           let decoded = try? JSONDecoder().decode(SettingsData.self, from: data) {
-            settingsData = decoded
-            selectedVoice = decoded.voice
-            selectedStartSound = decoded.starter
-            selectedTheme = decoded.theme
+
+    private var appearanceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Appearance")
+                .font(.headline)
+
+            Picker("Theme", selection: $appStore.settings.theme) {
+                ForEach(ThemeOption.allCases) { theme in
+                    Text(theme.displayName).tag(theme)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Toggle(isOn: $appStore.settings.isDarkMode) {
+                Text("Dark Mode")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+            }
+            .tint(controlTint)
         }
+        .liquidGlassCard()
     }
-    
-    // Save the user selections to UserDefaults
-    private func saveData() {
-        let newSettings = SettingsData(
-            voice: selectedVoice,
-            starter: selectedStartSound,
-            theme: selectedTheme
-        )
-        if let encoded = try? JSONEncoder().encode(newSettings) {
-            UserDefaults.standard.set(encoded, forKey: "settings")
+
+    private var aboutSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+            Text("Build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
+            Text("Developer: Zachary Kralec")
         }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .liquidGlassCard()
     }
-    
-    // Let users test starter sound
+
     private func playStarterSound() {
-        let fileName = selectedStartSound == "Clap" ? "single_clap" :
-        selectedStartSound == "Whistle" ? "short_whistle" :
-        selectedStartSound == "Electronic starter" ? "electronic_starter" : "starter_gun"
-        
-        if let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") {
-            do {
-                player = try AVAudioPlayer(contentsOf: url)
-                player?.prepareToPlay()
-                player?.play()
-            } catch {
-                print("Failed to play sound: \(error)")
-            }
+        guard let url = Bundle.main.url(forResource: appStore.settings.starter.fileName, withExtension: "mp3") else {
+            return
+        }
+
+        do {
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.prepareToPlay()
+            player?.play()
+        } catch {
+            print("Failed to play sound: \(error)")
         }
     }
 }
 
 #Preview {
-    SettingsView()
+    NavigationStack {
+        SettingsView()
+            .environmentObject(AppSettingsStore())
+    }
 }

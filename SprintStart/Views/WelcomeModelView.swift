@@ -9,74 +9,135 @@ import SwiftUI
 
 struct WelcomeModelView: View {
     @Binding var isVisible: Bool
-    @EnvironmentObject var theme: ThemeData
+    @EnvironmentObject var appStore: AppSettingsStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var isContinuing = false
+
+    private var themeColor: Color { appStore.settings.theme.accentColor }
 
     var body: some View {
-        VStack(spacing: 30) {
-            // Title
-            Text("Welcome to SprintStart")
-                .font(.largeTitle.bold())
-                .multilineTextAlignment(.center)
-                .padding(.top)
-
-            Text("Train like you race. SprintStart helps you sharpen your reaction time with a clean interface, custom voices, and starter timing.")
-                .multilineTextAlignment(.center)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-
-            // Features list
-            VStack(alignment: .leading, spacing: 24) {
-                featureRow(systemName: "mic.fill", title: "Custom voice commands", subtitle: "Hear the starter in your preferred voice.")
-                featureRow(systemName: "speaker.wave.2.fill", title: "Starter sound", subtitle: "Choose between a gun, clap, whistle, and more.")
-                featureRow(systemName: "paintpalette.fill", title: "Theming", subtitle: "Pick a theme color that matches your style.")
-                featureRow(systemName: "timer", title: "Race-day realism", subtitle: "Set your own delays with optional variability.")
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 18) {
+                    heroSection
+                    featureSection
+                    privacySection
+                }
+                .padding(.horizontal, GlassLayout.screenPadding)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
             }
-            .padding(.horizontal)
 
-            // Privacy note
-            Text("🔒 We don’t collect or share your data. Everything stays on your device.")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-                .padding(.top)
+            VStack(spacing: 10) {
+                Button {
+                    guard !isContinuing else { return }
+                    isContinuing = true
+                    UserDefaults.standard.set(true, forKey: "hasLaunched")
+                    isVisible = false
+                    dismiss()
+                } label: {
+                    Text("Continue")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(themeColor)
+                .controlSize(.large)
+                .disabled(isContinuing)
+                .accessibilityIdentifier("onboardingContinueButton")
 
-            Spacer()
-
-            // CTA button
-            Button(action: {
-                isVisible = false
-                UserDefaults.standard.set(true, forKey: "hasLaunched")
-            }) {
-                Text("Get Started")
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(theme.selectedColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(25)
+                Text("You can change audio, appearance, and timing behavior in Settings any time.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, GlassLayout.screenPadding)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
+            .background(.ultraThinMaterial)
         }
-        .padding(.bottom)
-        .background(Color(.systemBackground))
+        .liquidGlassScreenBackground(theme: appStore.settings.theme)
     }
 
-    func featureRow(systemName: String, title: String, subtitle: String) -> some View {
+    private var heroSection: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "figure.run.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(themeColor)
+
+            Text("Welcome to SprintStart")
+                .font(.title.bold())
+                .multilineTextAlignment(.center)
+
+            Text("Train your block start timing with consistent cues and focused reaction practice.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .liquidGlassCard()
+    }
+
+    private var featureSection: some View {
+        VStack(spacing: 0) {
+            featureRow(
+                systemName: "speaker.wave.3.fill",
+                title: "Realistic Starter Cues",
+                subtitle: "Use voice commands and sound cues to simulate race starts."
+            )
+
+            Divider()
+                .padding(.leading, 52)
+
+            featureRow(
+                systemName: "timer",
+                title: "Custom Timing Control",
+                subtitle: "Set your delays and apply optional variability for realism."
+            )
+
+            Divider()
+                .padding(.leading, 52)
+
+            featureRow(
+                systemName: "hand.point.up.left.fill",
+                title: "Reaction Practice",
+                subtitle: "Train release timing and track false starts with clear feedback."
+            )
+        }
+        .liquidGlassCard()
+    }
+
+    private var privacySection: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "lock.shield.fill")
+                .font(.headline)
+                .foregroundStyle(themeColor)
+                .frame(width: 22)
+
+            Text("All settings and training data stay on your device.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlassCard()
+    }
+
+    private func featureRow(systemName: String, title: String, subtitle: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: systemName)
-                .foregroundColor(theme.selectedColor)
-                .font(.title2)
-                .frame(width: 30)
+                .font(.headline)
+                .foregroundStyle(themeColor)
+                .frame(width: 22)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .fontWeight(.semibold)
+                    .font(.subheadline.weight(.semibold))
                 Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
+
+            Spacer(minLength: 0)
         }
+        .padding(.vertical, 10)
     }
 }

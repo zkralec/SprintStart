@@ -13,23 +13,16 @@
 
 import SwiftUI
 
-// If not able to start on iPhone (ex. extracting error), restart computer
 @main
 struct SprintStartApp: App {
-    @StateObject private var settings = SettingsModel()
-    @StateObject private var themeManager = ThemeData()
-    
+    @StateObject private var appStore = AppSettingsStore()
+
     var body: some Scene {
         WindowGroup {
             WelcomeView()
-                .environmentObject(settings)
-                .environmentObject(themeManager)
-                .tint(themeManager.selectedColor)
-                .onAppear {
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                        windowScene.windows.first?.overrideUserInterfaceStyle = settings.isDarkMode ? .dark : .light
-                    }
-                }
+                .environmentObject(appStore)
+                .tint(appStore.settings.theme.accentColor)
+                .preferredColorScheme(appStore.settings.isDarkMode ? .dark : .light)
         }
     }
 }
