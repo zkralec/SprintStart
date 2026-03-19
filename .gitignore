@@ -1,0 +1,18 @@
+.DS_Store
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate
+
+# Build products
+build/
+DerivedData/
+Products/
+*.app
+*.xctest
+
+# Swift Package Manager
+.build/
+
+# Simulator / device logs and misc
+*.ipa
