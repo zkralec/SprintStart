@@ -13,7 +13,10 @@ struct TimingControlsView: View {
     @Binding var variability: VariabilityOption
     @Binding var timingLocked: Bool
 
+    @EnvironmentObject private var purchaseManager: PurchaseManager
+
     @State private var showVariabilityHelp = false
+    @State private var paywallFeature: ProFeature?
 
     var body: some View {
         VStack(spacing: 14) {
@@ -41,6 +44,8 @@ struct TimingControlsView: View {
             delayAdjuster(
                 title: "Mark to Set",
                 valueText: "\(markDelay) sec",
+                canDecrement: markDelay > 1,
+                canIncrement: markDelay < 30,
                 decrement: { markDelay = max(1, markDelay - 1) },
                 increment: { markDelay = min(30, markDelay + 1) }
             )
@@ -48,6 +53,8 @@ struct TimingControlsView: View {
             delayAdjuster(
                 title: "Set to Start",
                 valueText: String(format: "%.2f sec", startDelay),
+                canDecrement: startDelay > 1.0,
+                canIncrement: startDelay < 5.0,
                 decrement: { startDelay = max(1.0, startDelay - 0.25) },
                 increment: { startDelay = min(5.0, startDelay + 0.25) }
             )
@@ -73,11 +80,10 @@ struct TimingControlsView: View {
                     .accessibilityLabel("Variability help")
                 }
 
-                Picker("Variability", selection: $variability) {
-                    Text("None").tag(VariabilityOption.none)
-                    Text("Low").tag(VariabilityOption.low)
-                    Text("Med").tag(VariabilityOption.medium)
-                    Text("High").tag(VariabilityOption.high)
+                Picker("Variability", selection: variabilitySelection) {
+                    ForEach(availableVariabilityOptions) { option in
+                        Text(variabilityLabel(for: option)).tag(option)
+                    }
                 }
                 .pickerStyle(.segmented)
                 .disabled(timingLocked)
@@ -86,12 +92,36 @@ struct TimingControlsView: View {
                     Text(variabilityDescription)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                         .transition(.opacity)
+                }
+
+                if !purchaseManager.hasPro {
+                    Button {
+                        paywallFeature = .advancedRandomness
+                    } label: {
+                        Text("Upgrade to Sprint Start Pro for more variability presets.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .opacity(timingLocked ? 0.7 : 1.0)
         }
         .liquidGlassCard()
+        .sheet(item: $paywallFeature) { feature in
+            ProPaywallView(feature: feature)
+        }
+        .onAppear {
+            enforceFreeVariability()
+        }
+        .onChange(of: purchaseManager.hasPro) {
+            enforceFreeVariability()
+        }
     }
 
     private var variabilityDescription: String {
@@ -107,9 +137,41 @@ struct TimingControlsView: View {
         }
     }
 
+    private var variabilitySelection: Binding<VariabilityOption> {
+        Binding(
+            get: { variability },
+            set: { newValue in
+                guard !timingLocked else { return }
+                variability = newValue
+            }
+        )
+    }
+
+    private var availableVariabilityOptions: [VariabilityOption] {
+        if purchaseManager.hasPro {
+            return VariabilityOption.allCases
+        }
+        return [.none, .low]
+    }
+
+    private func variabilityLabel(for option: VariabilityOption) -> String {
+        switch option {
+        case .none:
+            return "None"
+        case .low:
+            return "Low"
+        case .medium:
+            return "Med"
+        case .high:
+            return "High"
+        }
+    }
+
     private func delayAdjuster(
         title: String,
         valueText: String,
+        canDecrement: Bool,
+        canIncrement: Bool,
         decrement: @escaping () -> Void,
         increment: @escaping () -> Void
     ) -> some View {
@@ -124,10 +186,15 @@ struct TimingControlsView: View {
 
             Spacer()
 
-            HoldRepeatButton(systemImage: "minus", isDisabled: timingLocked, action: decrement)
-            HoldRepeatButton(systemImage: "plus", isDisabled: timingLocked, action: increment)
+            HoldRepeatButton(systemImage: "minus", isDisabled: timingLocked || !canDecrement, action: decrement)
+            HoldRepeatButton(systemImage: "plus", isDisabled: timingLocked || !canIncrement, action: increment)
         }
         .opacity(timingLocked ? 0.7 : 1.0)
+    }
+
+    private func enforceFreeVariability() {
+        guard !purchaseManager.hasPro, variability.requiresPro else { return }
+        variability = .low
     }
 }
 
@@ -200,4 +267,5 @@ private struct HoldRepeatButton: View {
         variability: .constant(.low),
         timingLocked: .constant(false)
     )
+    .environmentObject(PurchaseManager())
 }

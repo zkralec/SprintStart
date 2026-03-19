@@ -33,6 +33,15 @@ enum VariabilityOption: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    var requiresPro: Bool {
+        switch self {
+        case .medium, .high:
+            return true
+        case .none, .low:
+            return false
+        }
+    }
+
     init(legacyLabel: String) {
         switch legacyLabel {
         case "None (±0 sec)": self = .none

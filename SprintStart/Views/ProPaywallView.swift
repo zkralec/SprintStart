@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ProPaywallView: View {
+    @EnvironmentObject private var appStore: AppSettingsStore
     @EnvironmentObject var purchaseManager: PurchaseManager
     @Environment(\.dismiss) private var dismiss
 
@@ -17,12 +18,15 @@ struct ProPaywallView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: GlassLayout.sectionSpacing) {
-                heroSection
-                benefitSection
-                actionSection
+            ScrollView {
+                VStack(spacing: GlassLayout.sectionSpacing) {
+                    heroSection
+                    valueSection
+                    trustSection
+                    actionSection
+                }
+                .padding(GlassLayout.screenPadding)
             }
-            .padding(GlassLayout.screenPadding)
             .navigationTitle("Sprint Start Pro")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -36,7 +40,7 @@ struct ProPaywallView: View {
                 }
             }
         }
-        .liquidGlassScreenBackground(theme: .blue)
+        .liquidGlassScreenBackground(theme: appStore.settings.theme)
         .task {
             if purchaseManager.proProduct == nil {
                 await purchaseManager.loadProducts()
@@ -53,30 +57,85 @@ struct ProPaywallView: View {
     }
 
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Train Like It's Race Day")
-                .font(.title.bold())
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Sprint Start Pro")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text("Train Like It's Race Day")
+                        .font(.title.bold())
+                    Text(feature.subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
 
-            Text(feature.subtitle)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                Spacer()
+
+                Image(systemName: "figure.run.circle.fill")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(appStore.settings.theme.accentColor)
+            }
+
+            HStack(spacing: 10) {
+                tagLabel(feature.title)
+                tagLabel("One-time purchase")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlassCard()
     }
 
-    private var benefitSection: some View {
+    private var valueSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("What You Unlock")
+                .font(.headline)
+
+            VStack(spacing: 14) {
+                benefitRow(
+                    title: "Reaction time tracking",
+                    subtitle: "Record release reaction times and false starts in Reaction Mode."
+                )
+                benefitRow(
+                    title: "Session history",
+                    subtitle: "Save recent attempts so you can review each training block."
+                )
+                benefitRow(
+                    title: "Advanced randomness",
+                    subtitle: "Add Medium and High presets for more race-like start variation."
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlassCard()
+    }
+
+    private var trustSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            benefitRow("Unlock reaction time tracking")
-            benefitRow("Save session history")
-            benefitRow("Use advanced random start settings")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Simple and Native")
+                    .font(.headline)
+                Text("Sprint Start Pro keeps the app focused while unlocking the training features that benefit from tracking and deeper control.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 12) {
+                detailBlock(title: "Purchase", value: "One-time")
+                detailBlock(title: "Price", value: purchaseManager.displayPrice)
+                detailBlock(title: "Restore", value: "Included")
+            }
+
+            Text("Uses Apple's in-app purchase system. No subscription and no separate account required.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlassCard()
     }
 
     private var actionSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             Button {
                 Task {
                     let outcome = await purchaseManager.purchasePro()
@@ -96,8 +155,8 @@ struct ProPaywallView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LiquidGlassButtonStyle(tint: .black))
-            .disabled(purchaseManager.isPurchasing)
-            .opacity(purchaseManager.isPurchasing ? 0.6 : 1.0)
+            .disabled(purchaseManager.isPurchasing || purchaseManager.isLoadingProducts)
+            .opacity((purchaseManager.isPurchasing || purchaseManager.isLoadingProducts) ? 0.6 : 1.0)
 
             Button {
                 Task {
@@ -125,17 +184,43 @@ struct ProPaywallView: View {
         .liquidGlassCard()
     }
 
-    private func benefitRow(_ text: String) -> some View {
+    private func benefitRow(title: String, subtitle: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.primary)
-            Text(text)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+    }
+
+    private func detailBlock(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
                 .font(.subheadline.weight(.semibold))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func tagLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
     }
 }
 
 #Preview {
     ProPaywallView(feature: .general)
+        .environmentObject(AppSettingsStore())
         .environmentObject(PurchaseManager())
 }

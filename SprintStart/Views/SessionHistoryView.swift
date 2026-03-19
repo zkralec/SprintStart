@@ -51,6 +51,13 @@ struct SessionHistoryView: View {
 
     @State private var selectedRange: HistoryRange = .month
 
+    private struct ChartPoint: Identifiable {
+        let id: UUID
+        let attemptNumber: Int
+        let date: Date
+        let reactionMS: Int
+    }
+
     private var allEntries: [ReactionHistoryEntry] {
         reactionHistoryStore.entries.sorted { $0.date < $1.date }
     }
@@ -62,6 +69,18 @@ struct SessionHistoryView: View {
 
     private var reactionEntries: [ReactionHistoryEntry] {
         filteredEntries.filter { !$0.falseStart && $0.reactionMS != nil }
+    }
+
+    private var chartPoints: [ChartPoint] {
+        reactionEntries.enumerated().compactMap { index, entry in
+            guard let reactionMS = entry.reactionMS else { return nil }
+            return ChartPoint(
+                id: entry.id,
+                attemptNumber: index + 1,
+                date: entry.date,
+                reactionMS: reactionMS
+            )
+        }
     }
 
     private var falseStartCount: Int {
@@ -96,6 +115,7 @@ struct SessionHistoryView: View {
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .liquidGlassScreenBackground(theme: appStore.settings.theme)
     }
 
@@ -135,14 +155,14 @@ struct SessionHistoryView: View {
             Text("Reaction Trend")
                 .font(.headline)
 
-            if reactionEntries.isEmpty {
+            if chartPoints.isEmpty {
                 chartPlaceholder(
                     title: "No tracked reactions yet",
                     subtitle: "Complete a Reaction Mode attempt to start building your history."
                 )
-            } else if reactionEntries.count == 1 {
+            } else if chartPoints.count == 1 {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("\(reactionEntries[0].reactionMS ?? 0) ms")
+                    Text("\(chartPoints[0].reactionMS) ms")
                         .font(.system(size: 36, weight: .bold))
                         .foregroundStyle(appStore.settings.theme.accentColor)
                     Text("You need at least two tracked attempts in this range to see a trend line.")
@@ -151,31 +171,44 @@ struct SessionHistoryView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Chart(reactionEntries) { entry in
-                    if let reactionMS = entry.reactionMS {
-                        LineMark(
-                            x: .value("Attempt Date", entry.date),
-                            y: .value("Reaction Time", reactionMS)
-                        )
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(appStore.settings.theme.accentColor)
-                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                Chart(chartPoints) { point in
+                    LineMark(
+                        x: .value("Attempt", point.attemptNumber),
+                        y: .value("Reaction Time", point.reactionMS)
+                    )
+                    .interpolationMethod(.linear)
+                    .foregroundStyle(appStore.settings.theme.accentColor)
+                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
 
-                        PointMark(
-                            x: .value("Attempt Date", entry.date),
-                            y: .value("Reaction Time", reactionMS)
-                        )
-                        .foregroundStyle(appStore.settings.theme.accentColor)
-                        .symbolSize(40)
-                    }
+                    PointMark(
+                        x: .value("Attempt", point.attemptNumber),
+                        y: .value("Reaction Time", point.reactionMS)
+                    )
+                    .foregroundStyle(appStore.settings.theme.accentColor)
+                    .symbolSize(50)
                 }
                 .frame(height: 240)
                 .chartYAxis {
                     AxisMarks(position: .leading)
                 }
                 .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 4))
+                    AxisMarks(values: xAxisValues) { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let attemptNumber = value.as(Int.self),
+                               let point = chartPoint(for: attemptNumber) {
+                                VStack(spacing: 2) {
+                                    Text("A\(attemptNumber)")
+                                    Text(point.date, format: selectedRange == .day ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day())
+                                }
+                                .font(.caption2)
+                                .multilineTextAlignment(.center)
+                            }
+                        }
+                    }
                 }
+                .chartXAxisLabel("Attempt Order")
                 .chartPlotStyle { content in
                     content
                         .background(.ultraThinMaterial.opacity(0.35))
@@ -253,6 +286,23 @@ struct SessionHistoryView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var xAxisValues: [Int] {
+        guard let lastAttempt = chartPoints.last?.attemptNumber else { return [] }
+        if chartPoints.count <= 4 {
+            return chartPoints.map(\.attemptNumber)
+        }
+
+        let midpoint = max(2, Int(round(Double(lastAttempt) / 2.0)))
+        let quarter = max(2, Int(round(Double(lastAttempt) / 4.0)))
+        let threeQuarter = max(3, Int(round(Double(lastAttempt) * 0.75)))
+
+        return Array(Set([1, quarter, midpoint, threeQuarter, lastAttempt])).sorted()
+    }
+
+    private func chartPoint(for attemptNumber: Int) -> ChartPoint? {
+        chartPoints.first { $0.attemptNumber == attemptNumber }
     }
 }
 

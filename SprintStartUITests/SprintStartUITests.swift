@@ -66,6 +66,20 @@ final class SprintStartUITests: XCTestCase {
     }
 
     @MainActor
+    func testAdvancedRandomnessPresentsProPaywall() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched"]
+        app.launch()
+
+        let mediumButton = app.buttons["Med"]
+        XCTAssertTrue(mediumButton.waitForExistence(timeout: 2.0))
+        mediumButton.tap()
+
+        let upgradeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Unlock Sprint Start Pro")).firstMatch
+        XCTAssertTrue(upgradeButton.waitForExistence(timeout: 2.0))
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             measure(metrics: [XCTApplicationLaunchMetric()]) {

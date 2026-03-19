@@ -93,4 +93,28 @@ struct SprintStartTests {
 
         #expect(decoded.timingLocked == true)
     }
+
+    @Test
+    func variabilityProRequirementMatchesProductDesign() {
+        #expect(VariabilityOption.none.requiresPro == false)
+        #expect(VariabilityOption.low.requiresPro == false)
+        #expect(VariabilityOption.medium.requiresPro == true)
+        #expect(VariabilityOption.high.requiresPro == true)
+    }
+
+    @MainActor
+    @Test
+    func reactionHistoryStoreTrimsToMostRecentTwentyEntries() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defaults.removePersistentDomain(forName: #function)
+
+        let store = ReactionHistoryStore(defaults: defaults)
+        for index in 0..<25 {
+            store.addReaction(milliseconds: 100 + index)
+        }
+
+        #expect(store.entries.count == 20)
+        #expect(store.entries.first?.reactionMS == 124)
+        #expect(store.entries.last?.reactionMS == 105)
+    }
 }

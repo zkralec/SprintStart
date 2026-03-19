@@ -19,8 +19,12 @@ struct ReactionView: View {
 
     @State private var setWork: DispatchWorkItem?
     @State private var startWork: DispatchWorkItem?
+    @State private var paywallFeature: ProFeature?
+    @State private var shouldShowUpgradePrompt = false
 
     @EnvironmentObject var appStore: AppSettingsStore
+    @EnvironmentObject private var purchaseManager: PurchaseManager
+    @EnvironmentObject private var reactionHistoryStore: ReactionHistoryStore
 
     private let synthesizer = AVSpeechSynthesizer()
 
@@ -41,26 +45,12 @@ struct ReactionView: View {
                     Color.clear
                         .liquidGlassCard()
                         .overlay(contentOverlay)
-                        .overlay(
-                            TouchCaptureView { count in
-                                if count > 0 {
-                                    if !isHolding {
-                                        isHolding = true
-                                        beginArmedSequence()
-                                    }
-                                } else {
-                                    if isHolding {
-                                        isHolding = false
-                                        handleRelease()
-                                    }
-                                }
-                            }
-                        )
+                        .overlay(reactionTouchOverlay)
                 }
                 .frame(height: 338)
                 .contentShape(Rectangle())
                 .accessibilityLabel("Reaction zone")
-                .accessibilityHint("Place one or more fingers to arm. Release on the start cue to record your reaction time.")
+                .accessibilityHint(reactionAccessibilityHint)
 
                 TimingControlsView(
                     markDelay: $appStore.starter.firstDelay,
@@ -97,9 +87,13 @@ struct ReactionView: View {
             }
             .padding(GlassLayout.screenPadding)
         }
+        .scrollDisabled(isHolding || sequenceActive)
         .navigationTitle("SprintStart")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                historyToolbarItem
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink(destination: SettingsView()) {
                     Image(systemName: "gear")
@@ -117,6 +111,9 @@ struct ReactionView: View {
         }
         .onDisappear {
             cancelSequence()
+        }
+        .sheet(item: $paywallFeature) { feature in
+            ProPaywallView(feature: feature)
         }
     }
 
@@ -139,7 +136,13 @@ struct ReactionView: View {
 
     private var contentOverlay: some View {
         VStack(spacing: 12) {
-            if let ms = reactionMS {
+            if !purchaseManager.hasPro {
+                Image(systemName: "lock.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("Sprint Start Pro")
+                    .font(.title2.weight(.semibold))
+            } else if let ms = reactionMS {
                 Text("Release Reaction: \(ms) ms")
                     .font(.system(size: 42, weight: .bold))
                     .foregroundStyle(themeColor)
@@ -150,20 +153,102 @@ struct ReactionView: View {
             } else if isHolding {
                 Text("Holding... wait for the start")
                     .font(.title2)
+            } else if shouldShowUpgradePrompt, !purchaseManager.hasPro {
+                Text("Track each rep with Sprint Start Pro")
+                    .font(.title2.weight(.semibold))
+                    .multilineTextAlignment(.center)
             } else {
                 Text("Press and hold to arm")
                     .font(.title2)
             }
 
-            Text("Release on the start cue to record your reaction.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if !purchaseManager.hasPro && !isHolding {
+                Button {
+                    paywallFeature = .reactionTracking
+                } label: {
+                    Label("Unlock reaction time tracking", systemImage: "lock.fill")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
 
-            Text("Timing is based on the app cue and may vary slightly.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            if let instructionText {
+                Text(instructionText)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            if purchaseManager.hasPro {
+                Text("Timing is based on the app cue and may vary slightly.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding()
+    }
+
+    @ViewBuilder
+    private var reactionTouchOverlay: some View {
+        if purchaseManager.hasPro {
+            TouchCaptureView { count in
+                if count > 0 {
+                    if !isHolding {
+                        isHolding = true
+                        beginArmedSequence()
+                    }
+                } else if isHolding {
+                    isHolding = false
+                    handleRelease()
+                }
+            }
+        } else {
+            Button {
+                paywallFeature = .reactionTracking
+            } label: {
+                Color.clear
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private var historyToolbarItem: some View {
+        if purchaseManager.hasPro {
+            NavigationLink(destination: SessionHistoryView()) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .imageScale(.large)
+                    .foregroundStyle(themeColor)
+                    .accessibilityLabel("Session History")
+            }
+        } else {
+            Button {
+                paywallFeature = .sessionHistory
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .imageScale(.medium)
+                    Text("PRO")
+                        .font(.caption2.weight(.bold))
+                }
+                .foregroundStyle(themeColor)
+                .accessibilityLabel("Session History Pro")
+            }
+        }
+    }
+
+    private var instructionText: String? {
+        if !purchaseManager.hasPro {
+            return nil
+        }
+        return "Release on the start cue."
+    }
+
+    private var reactionAccessibilityHint: String {
+        if purchaseManager.hasPro {
+            return "Place one or more fingers to arm. Release on the start cue to train your reaction."
+        }
+        return "Reaction Mode requires Sprint Start Pro."
     }
 
     private func beginArmedSequence() {
@@ -171,15 +256,19 @@ struct ReactionView: View {
         reactionMS = nil
         sequenceActive = true
         startCueTime = nil
+        shouldShowUpgradePrompt = false
 
         speak("On your marks")
+        if appStore.settings.hapticsEnabled {
+            playMarkHaptic()
+        }
 
         let setItem = DispatchWorkItem {
             guard sequenceActive else { return }
             let setUtterance = AVSpeechUtterance(string: "Set")
             setUtterance.voice = AVSpeechSynthesisVoice(language: appStore.settings.voice.languageCode)
             synthesizer.speak(setUtterance)
-            if appStore.settings.hapticsEnabled && !appStore.settings.playOverSilent {
+            if appStore.settings.hapticsEnabled {
                 playSetHaptic()
             }
         }
@@ -194,7 +283,7 @@ struct ReactionView: View {
                 player.prepareToPlay()
                 player.play()
             }
-            if appStore.settings.hapticsEnabled && (!appStore.settings.playOverSilent || starterSound == nil) {
+            if appStore.settings.hapticsEnabled {
                 playStartHaptic()
             }
         }
@@ -212,11 +301,20 @@ struct ReactionView: View {
                 falseStart = true
                 reactionMS = nil
                 announceFalseStart()
+                if purchaseManager.hasPro {
+                    reactionHistoryStore.addFalseStart()
+                }
                 if appStore.settings.hapticsEnabled {
                     playFalseStartHaptic()
                 }
             } else {
-                reactionMS = ms
+                if purchaseManager.hasPro {
+                    reactionMS = ms
+                    reactionHistoryStore.addReaction(milliseconds: ms)
+                } else {
+                    reactionMS = nil
+                    shouldShowUpgradePrompt = true
+                }
             }
             sequenceActive = false
             cancelSequence()
@@ -224,6 +322,9 @@ struct ReactionView: View {
             falseStart = true
             sequenceActive = false
             announceFalseStart()
+            if purchaseManager.hasPro {
+                reactionHistoryStore.addFalseStart()
+            }
             if appStore.settings.hapticsEnabled {
                 playFalseStartHaptic()
             }
@@ -243,6 +344,7 @@ struct ReactionView: View {
         reactionMS = nil
         startCueTime = nil
         sequenceActive = false
+        shouldShowUpgradePrompt = false
     }
 
     private func preloadStarterSound() {
@@ -263,6 +365,12 @@ struct ReactionView: View {
     private func announceFalseStart() {
         synthesizer.stopSpeaking(at: .immediate)
         speak("False start")
+    }
+
+    private func playMarkHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
     }
 
     private func playSetHaptic() {
@@ -288,5 +396,7 @@ struct ReactionView: View {
     NavigationStack {
         ReactionView()
             .environmentObject(AppSettingsStore())
+            .environmentObject(PurchaseManager())
+            .environmentObject(ReactionHistoryStore())
     }
 }

@@ -8,28 +8,56 @@
 import SwiftUI
 
 struct WelcomeView: View {
-    @State private var welcomeScreen = true
     @State private var showWelcomePopup = false
-    @State private var splashOpacity = 0.0
+    @State private var didPrepareLaunch = false
+    @State private var isShowingLaunchOverlay = true
 
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var appStore: AppSettingsStore
+    @EnvironmentObject private var purchaseManager: PurchaseManager
 
     private var themeColor: Color { appStore.settings.theme.accentColor }
 
     var body: some View {
-        Group {
-            if welcomeScreen {
+        ZStack {
+            MainModesView()
+                .opacity(isShowingLaunchOverlay ? 0 : 1)
+                .fullScreenCover(isPresented: $showWelcomePopup) {
+                    WelcomeModelView(isVisible: $showWelcomePopup)
+                        .environmentObject(appStore)
+                }
+
+            if isShowingLaunchOverlay {
                 splashScreen
-            } else {
-                MainModesView()
-                    .fullScreenCover(isPresented: $showWelcomePopup) {
-                        WelcomeModelView(isVisible: $showWelcomePopup)
-                            .environmentObject(appStore)
-                    }
             }
         }
         .liquidGlassScreenBackground(theme: appStore.settings.theme)
+        .onAppear {
+            guard !didPrepareLaunch else { return }
+            didPrepareLaunch = true
+
+            let launchArgs = ProcessInfo.processInfo.arguments
+            if launchArgs.contains("-resetOnboarding") {
+                UserDefaults.standard.removeObject(forKey: "hasLaunched")
+            }
+            if launchArgs.contains("-markLaunched") {
+                UserDefaults.standard.set(true, forKey: "hasLaunched")
+            }
+
+            let hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
+            showWelcomePopup = !hasLaunched
+
+            if purchaseManager.hasCompletedInitialLoad {
+                isShowingLaunchOverlay = false
+            }
+        }
+        .onChange(of: purchaseManager.hasCompletedInitialLoad) {
+            if purchaseManager.hasCompletedInitialLoad {
+                withAnimation(.easeOut(duration: 0.18)) {
+                    isShowingLaunchOverlay = false
+                }
+            }
+        }
     }
 
     private var splashScreen: some View {
@@ -47,43 +75,6 @@ struct WelcomeView: View {
             ProgressView()
                 .tint(themeColor)
                 .padding(.top, 2)
-        }
-        .opacity(splashOpacity)
-        .onAppear {
-            let launchArgs = ProcessInfo.processInfo.arguments
-            if launchArgs.contains("-resetOnboarding") {
-                UserDefaults.standard.removeObject(forKey: "hasLaunched")
-            }
-            if launchArgs.contains("-markLaunched") {
-                UserDefaults.standard.set(true, forKey: "hasLaunched")
-            }
-            let isUITesting = launchArgs.contains("-uiTesting")
-            let skipSplash = launchArgs.contains("-skipSplash")
-
-            if skipSplash {
-                splashOpacity = 0
-                welcomeScreen = false
-                let hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
-                showWelcomePopup = !hasLaunched
-                return
-            }
-
-            withAnimation(.easeIn(duration: 0.2)) {
-                splashOpacity = 1
-            }
-
-            let delay = isUITesting ? 0.05 : Double.random(in: 0.3...0.7)
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                withAnimation(.easeOut(duration: isUITesting ? 0.05 : 0.2)) {
-                    splashOpacity = 0
-                }
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + (isUITesting ? 0.02 : 0.18)) {
-                    welcomeScreen = false
-                    let hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
-                    showWelcomePopup = !hasLaunched
-                }
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

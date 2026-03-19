@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		1424B5342E30078500B9B8A1 /* SprintStartApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1424B5212E30078500B9B8A1 /* SprintStartApp.swift */; };
+		14FF22692F6B715C00A9AC06 /* Sprint Start Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 14FF22682F6B715C00A9AC06 /* Sprint Start Pro.storekit */; };
+		14FF226A2F6B715C00A9AC06 /* Sprint Start Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 14FF22682F6B715C00A9AC06 /* Sprint Start Pro.storekit */; };
+		14FF226B2F6B715C00A9AC06 /* Sprint Start Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 14FF22682F6B715C00A9AC06 /* Sprint Start Pro.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +58,7 @@
 		149F35D22DF8D2280088FB6F /* SprintStart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SprintStart.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		149F35E32DF8D22A0088FB6F /* SprintStartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SprintStartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		149F35ED2DF8D22A0088FB6F /* SprintStartUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SprintStartUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14FF22682F6B715C00A9AC06 /* Sprint Start Pro.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Sprint Start Pro.storekit"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -103,6 +107,7 @@
 		149F35C92DF8D2280088FB6F = {
 			isa = PBXGroup;
 			children = (
+				14FF22682F6B715C00A9AC06 /* Sprint Start Pro.storekit */,
 				149F35D42DF8D2280088FB6F /* SprintStart */,
 				1424B5212E30078500B9B8A1 /* SprintStartApp.swift */,
 				149F35E62DF8D22A0088FB6F /* SprintStartTests */,
@@ -245,6 +250,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14FF22692F6B715C00A9AC06 /* Sprint Start Pro.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -252,6 +258,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14FF226A2F6B715C00A9AC06 /* Sprint Start Pro.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -259,6 +266,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14FF226B2F6B715C00A9AC06 /* Sprint Start Pro.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -430,7 +438,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SprintStart/SprintStart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"SprintStart/Preview Content\"";
 				ENABLE_APP_SANDBOX = YES;
@@ -454,7 +462,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Krackles.SprintStart;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -474,7 +482,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SprintStart/SprintStart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"SprintStart/Preview Content\"";
 				ENABLE_APP_SANDBOX = YES;
@@ -498,7 +506,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Krackles.SprintStart;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

@@ -43,6 +43,13 @@ final class AppSettingsStore: ObservableObject {
         starter = .default
     }
 
+    func enforceFreeTierSettings() {
+        settings.voice = .usFemale
+        settings.starter = .starterGun
+        settings.theme = .blue
+        settings.isDarkMode = false
+    }
+
     private func loadSettings() {
         if let data = defaults.data(forKey: Keys.settings),
            let decoded = try? JSONDecoder().decode(SettingsData.self, from: data) {

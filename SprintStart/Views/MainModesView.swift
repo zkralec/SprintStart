@@ -43,4 +43,6 @@ struct MainModesView: View {
 #Preview {
     MainModesView()
         .environmentObject(AppSettingsStore())
+        .environmentObject(PurchaseManager())
+        .environmentObject(ReactionHistoryStore())
 }

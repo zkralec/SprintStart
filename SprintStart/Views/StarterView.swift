@@ -153,6 +153,9 @@ struct StarterView: View {
         let mark = AVSpeechUtterance(string: "On your marks")
         mark.voice = AVSpeechSynthesisVoice(language: appStore.settings.voice.languageCode)
         synthesizer.speak(mark)
+        if appStore.settings.hapticsEnabled {
+            playMarkHaptic()
+        }
 
         let setItem = DispatchWorkItem {
             stopCountdownTimer()
@@ -217,6 +220,12 @@ struct StarterView: View {
         setWork = nil
         startWork = nil
         finishWork = nil
+    }
+
+    private func playMarkHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
     }
 
     private func playSetHaptic() {
