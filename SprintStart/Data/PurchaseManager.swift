@@ -34,8 +34,8 @@ final class PurchaseManager: ObservableObject {
 
         Task {
             await syncEntitlementsAtLaunch()
-            await loadProducts()
             hasCompletedInitialLoad = true
+            await loadProducts()
         }
     }
 

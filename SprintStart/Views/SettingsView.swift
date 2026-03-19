@@ -31,6 +31,7 @@ struct SettingsView: View {
                 proSection
                 audioSection
                 appearanceSection
+                infoSection
             }
             .padding(GlassLayout.screenPadding)
         }
@@ -145,22 +146,32 @@ struct SettingsView: View {
                 proLockedRow(title: "Starter Sound", value: appStore.settings.starter.displayName, feature: .general)
             }
 
-            Toggle(isOn: $appStore.settings.playOverSilent) {
-                Text("Play Over Silent Mode")
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-            }
-            .tint(controlTint)
-                .onChange(of: appStore.settings.playOverSilent) {
-                    try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    appStore.settings.playOverSilent.toggle()
                 }
-
-            Toggle(isOn: $appStore.settings.hapticsEnabled) {
-                Text("Haptics")
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
+            } label: {
+                toggleRow(
+                    title: "Play Over Silent Mode",
+                    isOn: appStore.settings.playOverSilent,
+                    symbol: appStore.settings.playOverSilent ? "speaker.wave.3.fill" : "speaker.slash.fill"
+                )
             }
-            .tint(controlTint)
+            .buttonStyle(.plain)
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    appStore.settings.hapticsEnabled.toggle()
+                }
+            } label: {
+                toggleRow(
+                    title: "Haptics",
+                    isOn: appStore.settings.hapticsEnabled,
+                    symbol: appStore.settings.hapticsEnabled ? "iphone.radiowaves.left.and.right" : "iphone.slash"
+                )
+            }
+            .buttonStyle(.plain)
 
             Button(soundTestButtonTitle) {
                 playStarterSound()
@@ -193,12 +204,18 @@ struct SettingsView: View {
             }
 
             if purchaseManager.hasPro {
-                Toggle(isOn: $appStore.settings.isDarkMode) {
-                    Text("Dark Mode")
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        appStore.settings.isDarkMode.toggle()
+                    }
+                } label: {
+                    toggleRow(
+                        title: "Dark Mode",
+                        isOn: appStore.settings.isDarkMode,
+                        symbol: appStore.settings.isDarkMode ? "moon.fill" : "sun.max.fill"
+                    )
                 }
-                .tint(controlTint)
+                .buttonStyle(.plain)
             } else {
                 proLockedRow(title: "Dark Mode", value: "Included with appearance controls", feature: .general)
             }
@@ -210,6 +227,43 @@ struct SettingsView: View {
         appStore.settings.isDarkMode
             ? "\(appStore.settings.theme.displayName) • Dark"
             : "\(appStore.settings.theme.displayName) • Light"
+    }
+
+    private var infoSection: some View {
+        Link(destination: URL(string: "https://zkralec.github.io/sprintstart-site/privacy.html")!) {
+            HStack(spacing: 10) {
+                Text("Privacy Policy")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                themeColor.opacity(colorScheme == .dark ? 0.14 : 0.12),
+                                themeColor.opacity(colorScheme == .dark ? 0.06 : 0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(themeColor.opacity(colorScheme == .dark ? 0.28 : 0.18), lineWidth: 1)
+            )
+        }
+        .liquidGlassCard()
     }
 
     private var soundTestButtonTitle: String {
@@ -302,6 +356,59 @@ struct SettingsView: View {
             Image(systemName: "chevron.up.chevron.down")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            themeColor.opacity(colorScheme == .dark ? 0.18 : 0.16),
+                            themeColor.opacity(colorScheme == .dark ? 0.08 : 0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(themeColor.opacity(colorScheme == .dark ? 0.35 : 0.22), lineWidth: 1)
+        )
+    }
+
+    private func toggleRow(
+        title: String,
+        isOn: Bool,
+        symbol: String
+    ) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(isOn ? "On" : "Off")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: symbol)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(themeColor)
+
+            Capsule()
+                .fill(isOn ? themeColor.opacity(colorScheme == .dark ? 0.9 : 0.78) : Color.secondary.opacity(0.22))
+                .frame(width: 46, height: 28)
+                .overlay(alignment: isOn ? .trailing : .leading) {
+                    Circle()
+                        .fill(Color.white.opacity(colorScheme == .dark ? 0.96 : 1.0))
+                        .frame(width: 22, height: 22)
+                        .padding(3)
+                }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

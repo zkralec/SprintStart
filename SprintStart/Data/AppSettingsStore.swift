@@ -45,7 +45,7 @@ final class AppSettingsStore: ObservableObject {
 
     func enforceFreeTierSettings() {
         settings.voice = .usFemale
-        settings.starter = .starterGun
+        settings.starter = .starterGun1
         settings.theme = .blue
         settings.isDarkMode = false
     }

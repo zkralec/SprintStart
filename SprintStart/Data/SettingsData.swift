@@ -39,37 +39,61 @@ enum VoiceOption: String, Codable, CaseIterable, Identifiable {
     }
 }
 enum StarterSoundOption: String, Codable, CaseIterable, Identifiable {
-    case starterGun
-    case electronicStarter
-    case whistle
-    case clap
+    case starterGun1
+    case starterGun2
+    case starterGun3
+    case starterGun4
+    case electronicStarter1
+    case whistle1
+    case whistle2
+    case whistle3
+    case whistle4
+    case clap1
 
     var id: Self { self }
 
     var displayName: String {
         switch self {
-        case .starterGun: return "Starter gun"
-        case .electronicStarter: return "Electronic starter"
-        case .whistle: return "Whistle"
-        case .clap: return "Clap"
+        case .starterGun1: return "Starter gun 1"
+        case .starterGun2: return "Starter gun 2"
+        case .starterGun3: return "Starter gun 3"
+        case .starterGun4: return "Starter gun 4"
+        case .electronicStarter1: return "Electronic starter 1"
+        case .whistle1: return "Whistle 1"
+        case .whistle2: return "Whistle 2"
+        case .whistle3: return "Whistle 3"
+        case .whistle4: return "Whistle 4"
+        case .clap1: return "Clap 1"
         }
     }
 
     var fileName: String {
         switch self {
-        case .starterGun: return "starter_gun"
-        case .electronicStarter: return "electronic_starter"
-        case .whistle: return "short_whistle"
-        case .clap: return "single_clap"
+        case .starterGun1: return "starter_gun_1"
+        case .starterGun2: return "starter_gun_2"
+        case .starterGun3: return "starter_gun_3"
+        case .starterGun4: return "starter_gun_4"
+        case .electronicStarter1: return "electronic_starter_1"
+        case .whistle1: return "whistle_1"
+        case .whistle2: return "whistle_2"
+        case .whistle3: return "whistle_3"
+        case .whistle4: return "whistle_4"
+        case .clap1: return "clap_1"
         }
     }
 
     init(legacyLabel: String) {
         switch legacyLabel {
-        case "Electronic starter": self = .electronicStarter
-        case "Whistle": self = .whistle
-        case "Clap": self = .clap
-        default: self = .starterGun
+        case "Starter gun 2": self = .starterGun2
+        case "Starter gun 3": self = .starterGun3
+        case "Starter gun 4": self = .starterGun4
+        case "Electronic starter", "Electronic starter 1": self = .electronicStarter1
+        case "Whistle", "Whistle 1": self = .whistle1
+        case "Whistle 2": self = .whistle2
+        case "Whistle 3": self = .whistle3
+        case "Whistle 4": self = .whistle4
+        case "Clap", "Clap 1": self = .clap1
+        default: self = .starterGun1
         }
     }
 }
@@ -145,7 +169,7 @@ struct SettingsData: Codable, Equatable {
 
     static let `default` = SettingsData(
         voice: .usFemale,
-        starter: .starterGun,
+        starter: .starterGun1,
         theme: .blue,
         playOverSilent: false,
         hapticsEnabled: true,
@@ -197,7 +221,7 @@ struct SettingsData: Codable, Equatable {
         } else if let legacyStarter = try container.decodeIfPresent(String.self, forKey: .starter) {
             starter = StarterSoundOption(legacyLabel: legacyStarter)
         } else {
-            starter = .starterGun
+            starter = .starterGun1
         }
 
         if let typedTheme = try? container.decode(ThemeOption.self, forKey: .theme) {

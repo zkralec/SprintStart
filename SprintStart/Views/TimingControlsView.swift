@@ -12,6 +12,7 @@ struct TimingControlsView: View {
     @Binding var startDelay: Double
     @Binding var variability: VariabilityOption
     @Binding var timingLocked: Bool
+    var interactionLocked = false
 
     @EnvironmentObject private var purchaseManager: PurchaseManager
 
@@ -37,6 +38,8 @@ struct TimingControlsView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                .disabled(interactionLocked)
+                .opacity(interactionLocked ? 0.45 : 1.0)
                 .accessibilityLabel(timingLocked ? "Unlock timing controls" : "Lock timing controls")
                 .accessibilityIdentifier("timingLockButton")
             }
@@ -86,7 +89,7 @@ struct TimingControlsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .disabled(timingLocked)
+                .disabled(timingLocked || interactionLocked)
 
                 if showVariabilityHelp {
                     Text(variabilityDescription)
@@ -110,7 +113,7 @@ struct TimingControlsView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .opacity(timingLocked ? 0.7 : 1.0)
+            .opacity((timingLocked || interactionLocked) ? 0.7 : 1.0)
         }
         .liquidGlassCard()
         .sheet(item: $paywallFeature) { feature in
@@ -142,6 +145,7 @@ struct TimingControlsView: View {
             get: { variability },
             set: { newValue in
                 guard !timingLocked else { return }
+                guard !interactionLocked else { return }
                 variability = newValue
             }
         )
@@ -186,10 +190,10 @@ struct TimingControlsView: View {
 
             Spacer()
 
-            HoldRepeatButton(systemImage: "minus", isDisabled: timingLocked || !canDecrement, action: decrement)
-            HoldRepeatButton(systemImage: "plus", isDisabled: timingLocked || !canIncrement, action: increment)
+            HoldRepeatButton(systemImage: "minus", isDisabled: timingLocked || interactionLocked || !canDecrement, action: decrement)
+            HoldRepeatButton(systemImage: "plus", isDisabled: timingLocked || interactionLocked || !canIncrement, action: increment)
         }
-        .opacity(timingLocked ? 0.7 : 1.0)
+        .opacity((timingLocked || interactionLocked) ? 0.7 : 1.0)
     }
 
     private func enforceFreeVariability() {

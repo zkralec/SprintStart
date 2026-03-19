@@ -10,7 +10,7 @@ import SwiftUI
 struct WelcomeModelView: View {
     @Binding var isVisible: Bool
     @EnvironmentObject var appStore: AppSettingsStore
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isContinuing = false
 
     private var themeColor: Color { appStore.settings.theme.accentColor }
@@ -33,15 +33,14 @@ struct WelcomeModelView: View {
                     guard !isContinuing else { return }
                     isContinuing = true
                     UserDefaults.standard.set(true, forKey: "hasLaunched")
-                    isVisible = false
-                    dismiss()
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        isVisible = false
+                    }
                 } label: {
                     Text("Continue")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(themeColor)
-                .controlSize(.large)
+                .buttonStyle(LiquidGlassButtonStyle(tint: themeColor))
                 .disabled(isContinuing)
                 .accessibilityIdentifier("onboardingContinueButton")
 
@@ -53,25 +52,35 @@ struct WelcomeModelView: View {
             .padding(.horizontal, GlassLayout.screenPadding)
             .padding(.top, 12)
             .padding(.bottom, 16)
-            .background(.ultraThinMaterial)
         }
         .liquidGlassScreenBackground(theme: appStore.settings.theme)
     }
 
     private var heroSection: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "figure.run.circle.fill")
-                .font(.system(size: 56))
+        VStack(spacing: 16) {
+            Image(colorScheme == .dark ? "DarkLogo" : "LightLogo")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 76, height: 76)
                 .foregroundStyle(themeColor)
 
-            Text("Welcome to SprintStart")
-                .font(.title.bold())
-                .multilineTextAlignment(.center)
+            VStack(spacing: 6) {
+                Text("Welcome to SprintStart")
+                    .font(.title.bold())
+                    .multilineTextAlignment(.center)
 
-            Text("Train your block start timing with consistent cues and focused reaction practice.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                Text("Solo sprint start training with race-style cues, clean timing control, and focused reaction work.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(spacing: 10) {
+                introTag("Random Starts")
+                introTag("Reaction Training")
+                introTag("Private Data")
+            }
         }
         .frame(maxWidth: .infinity)
         .liquidGlassCard()
@@ -81,8 +90,8 @@ struct WelcomeModelView: View {
         VStack(spacing: 0) {
             featureRow(
                 systemName: "speaker.wave.3.fill",
-                title: "Realistic Starter Cues",
-                subtitle: "Use voice commands and sound cues to simulate race starts."
+                title: "Race-Style Start Cues",
+                subtitle: "Use voice, sound, and haptic cues to simulate a clean solo start."
             )
 
             Divider()
@@ -90,8 +99,8 @@ struct WelcomeModelView: View {
 
             featureRow(
                 systemName: "timer",
-                title: "Custom Timing Control",
-                subtitle: "Set your delays and apply optional variability for realism."
+                title: "Simple Timing Control",
+                subtitle: "Adjust mark, set, and variability to match your training session."
             )
 
             Divider()
@@ -99,8 +108,8 @@ struct WelcomeModelView: View {
 
             featureRow(
                 systemName: "hand.point.up.left.fill",
-                title: "Reaction Practice",
-                subtitle: "Train release timing and track false starts with clear feedback."
+                title: "Focused Reaction Practice",
+                subtitle: "Train release timing and get clear feedback on false starts."
             )
         }
         .liquidGlassCard()
@@ -139,5 +148,13 @@ struct WelcomeModelView: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 10)
+    }
+
+    private func introTag(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
     }
 }

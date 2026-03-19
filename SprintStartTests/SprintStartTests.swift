@@ -26,7 +26,7 @@ struct SprintStartTests {
         let decoded = try JSONDecoder().decode(SettingsData.self, from: data)
 
         #expect(decoded.voice == .gbMale)
-        #expect(decoded.starter == .whistle)
+        #expect(decoded.starter == .whistle1)
         #expect(decoded.theme == .indigo)
         #expect(decoded.playOverSilent)
         #expect(decoded.hapticsEnabled)
@@ -104,17 +104,17 @@ struct SprintStartTests {
 
     @MainActor
     @Test
-    func reactionHistoryStoreTrimsToMostRecentTwentyEntries() {
+    func reactionHistoryStoreTrimsToMostRecentRetentionLimit() {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
 
         let store = ReactionHistoryStore(defaults: defaults)
-        for index in 0..<25 {
+        for index in 0..<5_010 {
             store.addReaction(milliseconds: 100 + index)
         }
 
-        #expect(store.entries.count == 20)
-        #expect(store.entries.first?.reactionMS == 124)
-        #expect(store.entries.last?.reactionMS == 105)
+        #expect(store.entries.count == 5_000)
+        #expect(store.entries.first?.reactionMS == 5_109)
+        #expect(store.entries.last?.reactionMS == 110)
     }
 }

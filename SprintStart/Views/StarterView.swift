@@ -10,18 +10,23 @@ import AVFoundation
 import UIKit
 
 struct StarterView: View {
+    private static let postStartButtonCooldown: TimeInterval = 0.45
+
     @State private var canStart = true
     @State private var started = false
-    @State private var onYourMarksRemainingTime: Double = 0
-    @State private var timer: Timer?
     @State private var starterSound: AVAudioPlayer?
     @State private var setWork: DispatchWorkItem?
     @State private var startWork: DispatchWorkItem?
     @State private var finishWork: DispatchWorkItem?
+    @State private var countdownStartDate: Date?
+    @State private var countdownEndDate: Date?
 
     @EnvironmentObject var appStore: AppSettingsStore
 
     private let synthesizer = AVSpeechSynthesizer()
+    private let markHapticGenerator = UIImpactFeedbackGenerator(style: .light)
+    private let setHapticGenerator = UIImpactFeedbackGenerator(style: .medium)
+    private let startHapticGenerator = UINotificationFeedbackGenerator()
 
     private var themeColor: Color { appStore.settings.theme.accentColor }
     private var primaryButtonTint: Color {
@@ -37,20 +42,23 @@ struct StarterView: View {
                 VStack(spacing: GlassLayout.sectionSpacing) {
                     header
 
-                    CountdownRing(
-                        totalTime: Double(appStore.starter.firstDelay),
-                        remainingTime: onYourMarksRemainingTime,
-                        lineWidth: 12,
-                        ringColor: themeColor
-                    )
-                    .frame(height: 330)
-                    .padding(.vertical, 4)
+                    TimelineView(.animation(minimumInterval: 0.05, paused: countdownEndDate == nil)) { context in
+                        CountdownRing(
+                            totalTime: currentCountdownTotalTime,
+                            remainingTime: currentRemainingTime(at: context.date),
+                            lineWidth: 12,
+                            ringColor: themeColor
+                        )
+                        .frame(height: 330)
+                        .padding(.vertical, 4)
+                    }
 
                     TimingControlsView(
                         markDelay: $appStore.starter.firstDelay,
                         startDelay: $appStore.starter.secondDelay,
                         variability: $appStore.starter.variability,
-                        timingLocked: $appStore.starter.timingLocked
+                        timingLocked: $appStore.starter.timingLocked,
+                        interactionLocked: started
                     )
 
                     controlsSection
@@ -71,13 +79,32 @@ struct StarterView: View {
                         .foregroundStyle(themeColor)
                         .accessibilityLabel("Settings")
                 }
+                .disabled(started)
+                .opacity(started ? 0.45 : 1.0)
                 .accessibilityIdentifier("openSettingsButton")
             }
         }
         .liquidGlassScreenBackground(theme: appStore.settings.theme)
+        .onAppear {
+            try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
+            preloadStarterSound()
+            prepareHaptics()
+        }
+        .onChange(of: appStore.settings.playOverSilent) {
+            try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
+        }
+        .onChange(of: appStore.settings.starter) {
+            preloadStarterSound()
+        }
+        .onChange(of: appStore.settings.hapticsEnabled) {
+            if appStore.settings.hapticsEnabled {
+                prepareHaptics()
+            }
+        }
         .onDisappear {
-            stopCountdownTimer()
             cancelSequence()
+            canStart = true
+            started = false
         }
     }
 
@@ -103,19 +130,18 @@ struct StarterView: View {
             Button {
                 playStarterSequence()
             } label: {
-                Text(started ? "Running..." : "Start")
+                Text(started ? "Sequence Running" : "Start")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LiquidGlassButtonStyle(tint: primaryButtonTint))
             .disabled(!canStart)
-            .opacity(!canStart ? 0.5 : 1.0)
+            .opacity(!canStart ? 0.42 : 1.0)
+            .saturation(!canStart ? 0.75 : 1.0)
             .accessibilityLabel("Start sequence")
 
             Button {
-                stopCountdownTimer()
                 cancelSequence()
-                onYourMarksRemainingTime = 0
                 canStart = true
                 started = false
                 appStore.resetStarterToDefaults()
@@ -124,8 +150,8 @@ struct StarterView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LiquidGlassButtonStyle(tint: .red))
-            .disabled(appStore.starter.timingLocked)
-            .opacity(appStore.starter.timingLocked ? 0.55 : 1.0)
+            .disabled(appStore.starter.timingLocked || started)
+            .opacity((appStore.starter.timingLocked || started) ? 0.55 : 1.0)
             .accessibilityLabel("Reset to defaults")
             .accessibilityIdentifier("resetDefaultsButtonStandard")
         }
@@ -138,17 +164,10 @@ struct StarterView: View {
         started = true
         cancelSequence()
 
-        try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
-
-        if let soundURL = Bundle.main.url(forResource: appStore.settings.starter.fileName, withExtension: "mp3") {
-            starterSound = try? AVAudioPlayer(contentsOf: soundURL)
-            starterSound?.prepareToPlay()
-        }
-
         let startDelay = appStore.starter.variability.randomStartDelay(baseDelay: appStore.starter.secondDelay)
 
-        onYourMarksRemainingTime = Double(appStore.starter.firstDelay)
-        startCountdownTimer()
+        startCountdown()
+        prepareHaptics()
 
         let mark = AVSpeechUtterance(string: "On your marks")
         mark.voice = AVSpeechSynthesisVoice(language: appStore.settings.voice.languageCode)
@@ -158,23 +177,19 @@ struct StarterView: View {
         }
 
         let setItem = DispatchWorkItem {
-            stopCountdownTimer()
+            resetCountdown()
 
             let set = AVSpeechUtterance(string: "Set")
             set.voice = AVSpeechSynthesisVoice(language: appStore.settings.voice.languageCode)
             synthesizer.speak(set)
-            if appStore.settings.hapticsEnabled && !appStore.settings.playOverSilent {
+            if appStore.settings.hapticsEnabled {
                 playSetHaptic()
             }
 
             let startItem = DispatchWorkItem {
-                let duration: TimeInterval
                 if let player = starterSound {
                     player.prepareToPlay()
                     player.play()
-                    duration = player.duration > 0 ? player.duration : 2.5
-                } else {
-                    duration = 1.0
                 }
 
                 if appStore.settings.hapticsEnabled {
@@ -186,7 +201,7 @@ struct StarterView: View {
                     started = false
                 }
                 finishWork = finishItem
-                DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: finishItem)
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.postStartButtonCooldown, execute: finishItem)
             }
 
             startWork = startItem
@@ -197,20 +212,26 @@ struct StarterView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + Double(appStore.starter.firstDelay), execute: setItem)
     }
 
-    private func startCountdownTimer() {
-        stopCountdownTimer()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if onYourMarksRemainingTime > 0 {
-                onYourMarksRemainingTime -= 1
-            } else {
-                stopCountdownTimer()
-            }
+    private var currentCountdownTotalTime: Double {
+        guard let countdownStartDate, let countdownEndDate else {
+            return Double(appStore.starter.firstDelay)
         }
+        return max(countdownEndDate.timeIntervalSince(countdownStartDate), 0.1)
     }
 
-    private func stopCountdownTimer() {
-        timer?.invalidate()
-        timer = nil
+    private func currentRemainingTime(at date: Date) -> Double {
+        guard let countdownEndDate else { return 0 }
+        return max(countdownEndDate.timeIntervalSince(date), 0)
+    }
+
+    private func startCountdown() {
+        countdownStartDate = .now
+        countdownEndDate = Date().addingTimeInterval(Double(appStore.starter.firstDelay))
+    }
+
+    private func resetCountdown() {
+        countdownStartDate = nil
+        countdownEndDate = nil
     }
 
     private func cancelSequence() {
@@ -220,24 +241,38 @@ struct StarterView: View {
         setWork = nil
         startWork = nil
         finishWork = nil
+        resetCountdown()
+    }
+
+    private func preloadStarterSound() {
+        guard let soundURL = Bundle.main.url(forResource: appStore.settings.starter.fileName, withExtension: "mp3") else {
+            starterSound = nil
+            return
+        }
+
+        starterSound = try? AVAudioPlayer(contentsOf: soundURL)
+        starterSound?.prepareToPlay()
+    }
+
+    private func prepareHaptics() {
+        markHapticGenerator.prepare()
+        setHapticGenerator.prepare()
+        startHapticGenerator.prepare()
     }
 
     private func playMarkHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        markHapticGenerator.impactOccurred()
+        markHapticGenerator.prepare()
     }
 
     private func playSetHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        setHapticGenerator.impactOccurred()
+        setHapticGenerator.prepare()
     }
 
     private func playStartHaptic() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        startHapticGenerator.notificationOccurred(.success)
+        startHapticGenerator.prepare()
     }
 }
 

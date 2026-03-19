@@ -18,16 +18,15 @@ struct ProPaywallView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: GlassLayout.sectionSpacing) {
-                    heroSection
-                    valueSection
-                    trustSection
-                    actionSection
-                }
-                .padding(GlassLayout.screenPadding)
+            VStack(spacing: 14) {
+                heroSection
+                valueSection
+                trustSection
+                Spacer(minLength: 0)
+                actionSection
             }
-            .navigationTitle("Sprint Start Pro")
+            .padding(GlassLayout.screenPadding)
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -57,85 +56,63 @@ struct ProPaywallView: View {
     }
 
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Sprint Start Pro")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text("Train Like It's Race Day")
-                        .font(.title.bold())
-                    Text(feature.subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: "figure.run.circle.fill")
-                    .font(.system(size: 34, weight: .semibold))
+                    .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(appStore.settings.theme.accentColor)
+                Text("Sprint Start Pro")
+                    .font(.headline.weight(.semibold))
+            }
+
+            VStack(spacing: 6) {
+                Text("Train Like It's Race Day")
+                    .font(.title.bold())
+                Text("Unlock reaction tracking, session history, and advanced randomness.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
 
             HStack(spacing: 10) {
-                tagLabel(feature.title)
                 tagLabel("One-time purchase")
+                tagLabel(purchaseManager.displayPrice)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .liquidGlassCard()
     }
 
     private var valueSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("What You Unlock")
-                .font(.headline)
-
-            VStack(spacing: 14) {
-                benefitRow(
-                    title: "Reaction time tracking",
-                    subtitle: "Record release reaction times and false starts in Reaction Mode."
-                )
-                benefitRow(
-                    title: "Session history",
-                    subtitle: "Save recent attempts so you can review each training block."
-                )
-                benefitRow(
-                    title: "Advanced randomness",
-                    subtitle: "Add Medium and High presets for more race-like start variation."
-                )
-            }
+        VStack(spacing: 12) {
+            benefitRow("Reaction time tracking")
+            benefitRow("Session history")
+            benefitRow("Advanced randomness")
+            benefitRow("More voice, sound, and theme options")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlassCard()
     }
 
     private var trustSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Simple and Native")
-                    .font(.headline)
-                Text("Sprint Start Pro keeps the app focused while unlocking the training features that benefit from tracking and deeper control.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
+        VStack(spacing: 10) {
             HStack(spacing: 12) {
                 detailBlock(title: "Purchase", value: "One-time")
-                detailBlock(title: "Price", value: purchaseManager.displayPrice)
                 detailBlock(title: "Restore", value: "Included")
+                detailBlock(title: "Access", value: "Apple ID")
             }
 
-            Text("Uses Apple's in-app purchase system. No subscription and no separate account required.")
+            Text("Uses Apple's in-app purchase system. No subscription.")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .liquidGlassCard()
     }
 
     private var actionSection: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             Button {
                 Task {
                     let outcome = await purchaseManager.purchasePro()
@@ -184,30 +161,26 @@ struct ProPaywallView: View {
         .liquidGlassCard()
     }
 
-    private func benefitRow(title: String, subtitle: String) -> some View {
+    private func benefitRow(_ text: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.primary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            Text(text)
+                .font(.subheadline.weight(.semibold))
             Spacer()
         }
     }
 
     private func detailBlock(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(spacing: 4) {
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.subheadline.weight(.semibold))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .multilineTextAlignment(.center)
     }
 
     private func tagLabel(_ text: String) -> some View {

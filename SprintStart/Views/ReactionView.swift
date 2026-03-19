@@ -27,6 +27,10 @@ struct ReactionView: View {
     @EnvironmentObject private var reactionHistoryStore: ReactionHistoryStore
 
     private let synthesizer = AVSpeechSynthesizer()
+    private let markHapticGenerator = UIImpactFeedbackGenerator(style: .light)
+    private let setHapticGenerator = UIImpactFeedbackGenerator(style: .medium)
+    private let startHapticGenerator = UINotificationFeedbackGenerator()
+    private let falseStartHapticGenerator = UINotificationFeedbackGenerator()
 
     private var themeColor: Color { appStore.settings.theme.accentColor }
     private var primaryButtonTint: Color {
@@ -56,7 +60,8 @@ struct ReactionView: View {
                     markDelay: $appStore.starter.firstDelay,
                     startDelay: $appStore.starter.secondDelay,
                     variability: $appStore.starter.variability,
-                    timingLocked: $appStore.starter.timingLocked
+                    timingLocked: $appStore.starter.timingLocked,
+                    interactionLocked: isHolding || sequenceActive
                 )
 
                 VStack(spacing: 12) {
@@ -68,6 +73,8 @@ struct ReactionView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(tint: primaryButtonTint))
+                    .disabled(isHolding || sequenceActive)
+                    .opacity((isHolding || sequenceActive) ? 0.55 : 1.0)
 
                     Button {
                         cancelSequence()
@@ -78,8 +85,8 @@ struct ReactionView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(tint: .red))
-                    .disabled(appStore.starter.timingLocked)
-                    .opacity(appStore.starter.timingLocked ? 0.55 : 1.0)
+                    .disabled(appStore.starter.timingLocked || isHolding || sequenceActive)
+                    .opacity((appStore.starter.timingLocked || isHolding || sequenceActive) ? 0.55 : 1.0)
                     .accessibilityIdentifier("resetDefaultsButtonReaction")
                 }
 
@@ -101,6 +108,8 @@ struct ReactionView: View {
                         .foregroundStyle(themeColor)
                         .accessibilityLabel("Settings")
                 }
+                .disabled(isHolding || sequenceActive)
+                .opacity((isHolding || sequenceActive) ? 0.45 : 1.0)
                 .accessibilityIdentifier("openSettingsButton")
             }
         }
@@ -108,9 +117,23 @@ struct ReactionView: View {
         .onAppear {
             try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
             preloadStarterSound()
+            prepareHaptics()
+        }
+        .onChange(of: appStore.settings.playOverSilent) {
+            try? AudioSessionManager.shared.configure(appStore.settings.playOverSilent ? .playOverSilent : .respectsSilent)
+        }
+        .onChange(of: appStore.settings.starter) {
+            preloadStarterSound()
+        }
+        .onChange(of: appStore.settings.hapticsEnabled) {
+            if appStore.settings.hapticsEnabled {
+                prepareHaptics()
+            }
         }
         .onDisappear {
             cancelSequence()
+            resetUI()
+            isHolding = false
         }
         .sheet(item: $paywallFeature) { feature in
             ProPaywallView(feature: feature)
@@ -221,6 +244,8 @@ struct ReactionView: View {
                     .foregroundStyle(themeColor)
                     .accessibilityLabel("Session History")
             }
+            .disabled(isHolding || sequenceActive)
+            .opacity((isHolding || sequenceActive) ? 0.45 : 1.0)
         } else {
             Button {
                 paywallFeature = .sessionHistory
@@ -234,6 +259,8 @@ struct ReactionView: View {
                 .foregroundStyle(themeColor)
                 .accessibilityLabel("Session History Pro")
             }
+            .disabled(isHolding || sequenceActive)
+            .opacity((isHolding || sequenceActive) ? 0.45 : 1.0)
         }
     }
 
@@ -257,6 +284,7 @@ struct ReactionView: View {
         sequenceActive = true
         startCueTime = nil
         shouldShowUpgradePrompt = false
+        prepareHaptics()
 
         speak("On your marks")
         if appStore.settings.hapticsEnabled {
@@ -362,33 +390,36 @@ struct ReactionView: View {
         synthesizer.speak(utterance)
     }
 
+    private func prepareHaptics() {
+        markHapticGenerator.prepare()
+        setHapticGenerator.prepare()
+        startHapticGenerator.prepare()
+        falseStartHapticGenerator.prepare()
+    }
+
     private func announceFalseStart() {
         synthesizer.stopSpeaking(at: .immediate)
         speak("False start")
     }
 
     private func playMarkHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        markHapticGenerator.impactOccurred()
+        markHapticGenerator.prepare()
     }
 
     private func playSetHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        setHapticGenerator.impactOccurred()
+        setHapticGenerator.prepare()
     }
 
     private func playStartHaptic() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        startHapticGenerator.notificationOccurred(.success)
+        startHapticGenerator.prepare()
     }
 
     private func playFalseStartHaptic() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.error)
+        falseStartHapticGenerator.notificationOccurred(.error)
+        falseStartHapticGenerator.prepare()
     }
 }
 
