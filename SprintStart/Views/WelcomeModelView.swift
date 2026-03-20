@@ -10,7 +10,6 @@ import SwiftUI
 struct WelcomeModelView: View {
     @Binding var isVisible: Bool
     @EnvironmentObject var appStore: AppSettingsStore
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isContinuing = false
 
     private var themeColor: Color { appStore.settings.theme.accentColor }
@@ -58,12 +57,11 @@ struct WelcomeModelView: View {
 
     private var heroSection: some View {
         VStack(spacing: 16) {
-            Image(colorScheme == .dark ? "DarkLogo" : "LightLogo")
-                .renderingMode(.template)
+            Image("AppLogo")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 76, height: 76)
-                .foregroundStyle(themeColor)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
             VStack(spacing: 6) {
                 Text("Welcome to SprintStart")

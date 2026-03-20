@@ -12,7 +12,6 @@ struct WelcomeView: View {
     @State private var didPrepareLaunch = false
     @State private var isShowingLaunchOverlay = true
 
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var appStore: AppSettingsStore
     @EnvironmentObject private var purchaseManager: PurchaseManager
 
@@ -59,12 +58,11 @@ struct WelcomeView: View {
 
     private var splashScreen: some View {
         VStack(spacing: 18) {
-            Image(colorScheme == .dark ? "DarkLogo" : "LightLogo")
-                .renderingMode(.template)
+            Image("AppLogo")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 96, height: 96)
-                .foregroundStyle(themeColor)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
             VStack(spacing: 8) {
                 Text("SprintStart")
