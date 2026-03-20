@@ -43,40 +43,62 @@ struct WelcomeView: View {
             if launchArgs.contains("-markLaunched") {
                 UserDefaults.standard.set(true, forKey: "hasLaunched")
             }
+            if launchArgs.contains("-skipSplash") || launchArgs.contains("-uiTesting") {
+                isShowingLaunchOverlay = false
+            }
 
             let hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
             showWelcomePopup = !hasLaunched
 
-            if purchaseManager.hasCompletedInitialLoad {
-                isShowingLaunchOverlay = false
-            }
+            dismissLaunchOverlayIfReady()
         }
         .onChange(of: purchaseManager.hasCompletedInitialLoad) {
-            if purchaseManager.hasCompletedInitialLoad {
-                withAnimation(.easeOut(duration: 0.18)) {
-                    isShowingLaunchOverlay = false
-                }
-            }
+            dismissLaunchOverlayIfReady()
         }
     }
 
     private var splashScreen: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 18) {
             Image(colorScheme == .dark ? "DarkLogo" : "LightLogo")
                 .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 110, height: 110)
+                .frame(width: 96, height: 96)
                 .foregroundStyle(themeColor)
 
-            Text("SprintStart")
-                .font(.title2.weight(.semibold))
+            VStack(spacing: 8) {
+                Text("SprintStart")
+                    .font(.title.weight(.bold))
 
-            ProgressView()
-                .tint(themeColor)
-                .padding(.top, 2)
+                Text("Solo sprint start training with race-style cues and focused reaction work.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(spacing: 10) {
+                splashTag("Random Starts")
+                splashTag("Reaction Training")
+                splashTag("Private Data")
+            }
         }
+        .padding(.horizontal, GlassLayout.screenPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func dismissLaunchOverlayIfReady() {
+        guard purchaseManager.hasCompletedInitialLoad else { return }
+        withAnimation(.easeOut(duration: 0.18)) {
+            isShowingLaunchOverlay = false
+        }
+    }
+
+    private func splashTag(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
     }
 }
 
