@@ -33,6 +33,7 @@ final class PurchaseManager: ObservableObject {
         updatesTask = observeTransactionUpdates()
 
         Task {
+            await debugLoadProducts()
             await syncEntitlementsAtLaunch()
             hasCompletedInitialLoad = true
             await loadProducts()
@@ -55,9 +56,17 @@ final class PurchaseManager: ObservableObject {
         isLoadingProducts = true
         defer { isLoadingProducts = false }
 
+        print("SS_IAP >>> FETCH START")
+
         do {
             products = try await Product.products(for: [Self.productID])
+            print("SS_IAP >>> FETCH COUNT = \(products.count)")
+            print("SS_IAP >>> FETCH IDS = \(products.map(\.id))")
+            if products.isEmpty {
+                print("SS_IAP >>> EMPTY ARRAY")
+            }
         } catch {
+            print("SS_IAP >>> FETCH ERROR = \(error.localizedDescription)")
             lastErrorMessage = "Unable to load Sprint Start Pro right now."
         }
     }
@@ -68,6 +77,8 @@ final class PurchaseManager: ObservableObject {
     }
 
     func purchasePro() async -> PurchaseOutcome {
+        print("SS_IAP >>> PURCHASE TAPPED")
+
         if proProduct == nil {
             await loadProducts()
         }
@@ -96,6 +107,7 @@ final class PurchaseManager: ObservableObject {
                 return .failed("Purchase could not be completed.")
             }
         } catch {
+            print("SS_IAP >>> PURCHASE ERROR = \(error.localizedDescription)")
             return .failed(error.localizedDescription)
         }
     }
@@ -108,6 +120,10 @@ final class PurchaseManager: ObservableObject {
         } catch {
             return .failed("Restore failed. Please try again.")
         }
+    }
+
+    func debugLoadProducts() async {
+        await loadProducts()
     }
 
     private func refreshEntitlements() async {
