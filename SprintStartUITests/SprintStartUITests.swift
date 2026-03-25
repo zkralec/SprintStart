@@ -80,6 +80,20 @@ final class SprintStartUITests: XCTestCase {
     }
 
     @MainActor
+    func testProPaywallShowsUnlockAndRestoreButtons() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched"]
+        app.launch()
+
+        let mediumButton = app.buttons["Med"]
+        XCTAssertTrue(mediumButton.waitForExistence(timeout: 2.0))
+        mediumButton.tap()
+
+        XCTAssertTrue(app.buttons["proUnlockButton"].waitForExistence(timeout: 2.0))
+        XCTAssertTrue(app.buttons["proRestoreButton"].waitForExistence(timeout: 2.0))
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             measure(metrics: [XCTApplicationLaunchMetric()]) {

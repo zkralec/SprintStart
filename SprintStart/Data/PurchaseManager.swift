@@ -8,6 +8,14 @@
 import Foundation
 import StoreKit
 
+enum ProductLoadState: Equatable {
+    case idle
+    case loading
+    case loaded
+    case empty
+    case failed(String)
+}
+
 @MainActor
 final class PurchaseManager: ObservableObject {
     static let productID = "com.sprintstart.pro"
@@ -17,6 +25,8 @@ final class PurchaseManager: ObservableObject {
     @Published private(set) var isLoadingProducts = false
     @Published private(set) var isPurchasing = false
     @Published private(set) var hasCompletedInitialLoad = false
+    @Published private(set) var productLoadState: ProductLoadState = .idle
+    @Published private(set) var lastStoreKitDebugMessage: String = ""
     @Published var lastErrorMessage: String?
 
     private let defaults: UserDefaults
@@ -33,10 +43,9 @@ final class PurchaseManager: ObservableObject {
         updatesTask = observeTransactionUpdates()
 
         Task {
-            await debugLoadProducts()
             await syncEntitlementsAtLaunch()
-            hasCompletedInitialLoad = true
             await loadProducts()
+            hasCompletedInitialLoad = true
         }
     }
 
@@ -49,25 +58,44 @@ final class PurchaseManager: ObservableObject {
     }
 
     var displayPrice: String {
-        proProduct?.displayPrice ?? "$2.99"
+        proProduct?.displayPrice ?? "App Store price"
     }
 
     func loadProducts() async {
+        let requestedIDs = [Self.productID]
         isLoadingProducts = true
+        productLoadState = .loading
+        updateDebugMessage("Loading products")
+        print("SS_IAP >>> FETCH START")
+        print("SS_IAP >>> FETCH REQUEST IDS = \(requestedIDs)")
         defer { isLoadingProducts = false }
 
-        print("SS_IAP >>> FETCH START")
-
         do {
-            products = try await Product.products(for: [Self.productID])
-            print("SS_IAP >>> FETCH COUNT = \(products.count)")
-            print("SS_IAP >>> FETCH IDS = \(products.map(\.id))")
-            if products.isEmpty {
+            let fetchedProducts = try await Product.products(for: requestedIDs)
+            print("SS_IAP >>> FETCH COUNT = \(fetchedProducts.count)")
+            print("SS_IAP >>> FETCH IDS = \(fetchedProducts.map(\.id))")
+
+            if fetchedProducts.isEmpty {
+                products = []
+                productLoadState = .empty
+                let message = "Purchase options are temporarily unavailable for \(Self.productID)."
+                lastErrorMessage = message
+                updateDebugMessage("Empty product array for \(Self.productID)")
                 print("SS_IAP >>> EMPTY ARRAY")
+                return
             }
+
+            products = fetchedProducts
+            productLoadState = .loaded
+            lastErrorMessage = nil
+            updateDebugMessage("Loaded \(fetchedProducts.count) product(s)")
         } catch {
-            print("SS_IAP >>> FETCH ERROR = \(error.localizedDescription)")
-            lastErrorMessage = "Unable to load Sprint Start Pro right now."
+            products = []
+            let friendlyMessage = "Purchase options are temporarily unavailable. Please try again in a moment."
+            productLoadState = .failed(friendlyMessage)
+            lastErrorMessage = friendlyMessage
+            updateDebugMessage("Fetch failed: \(error.localizedDescription)")
+            print("SS_IAP >>> FETCH ERROR = \(error)")
         }
     }
 
@@ -78,13 +106,16 @@ final class PurchaseManager: ObservableObject {
 
     func purchasePro() async -> PurchaseOutcome {
         print("SS_IAP >>> PURCHASE TAPPED")
+        updateDebugMessage("Purchase started")
 
         if proProduct == nil {
             await loadProducts()
         }
 
         guard let product = proProduct else {
-            return .failed("Sprint Start Pro is unavailable right now.")
+            print("SS_IAP >>> PURCHASE LOOKUP FAILED AFTER RELOAD")
+            updateDebugMessage("Purchase lookup failed after reload")
+            return .failed("Purchase options are temporarily unavailable. Please try again in a moment.")
         }
 
         isPurchasing = true
@@ -95,35 +126,44 @@ final class PurchaseManager: ObservableObject {
 
             switch result {
             case .success(let verification):
+                print("SS_IAP >>> PURCHASE RESULT = success")
                 let transaction = try checkVerified(verification)
                 await refreshEntitlements()
                 await transaction.finish()
                 return .purchased
             case .userCancelled:
+                print("SS_IAP >>> PURCHASE RESULT = userCancelled")
                 return .cancelled
             case .pending:
+                print("SS_IAP >>> PURCHASE RESULT = pending")
                 return .pending
             @unknown default:
+                print("SS_IAP >>> PURCHASE RESULT = unknown")
                 return .failed("Purchase could not be completed.")
             }
         } catch {
-            print("SS_IAP >>> PURCHASE ERROR = \(error.localizedDescription)")
-            return .failed(error.localizedDescription)
+            print("SS_IAP >>> PURCHASE ERROR = \(error)")
+            updateDebugMessage("Purchase failed: \(error.localizedDescription)")
+            if let purchaseError = error as? PurchaseError, purchaseError == .failedVerification {
+                return .failed("Purchase verification failed. Please try again.")
+            }
+            return .failed("Purchase could not be completed. Please try again.")
         }
     }
 
     func restorePurchases() async -> RestoreOutcome {
+        print("SS_IAP >>> RESTORE START")
+        updateDebugMessage("Restore started")
         do {
             try await AppStore.sync()
             await refreshEntitlements()
+            print("SS_IAP >>> RESTORE RESULT hasPro = \(hasPro)")
             return hasPro ? .restored : .nothingToRestore
         } catch {
+            print("SS_IAP >>> RESTORE ERROR = \(error)")
+            updateDebugMessage("Restore failed: \(error.localizedDescription)")
             return .failed("Restore failed. Please try again.")
         }
-    }
-
-    func debugLoadProducts() async {
-        await loadProducts()
     }
 
     private func refreshEntitlements() async {
@@ -139,6 +179,8 @@ final class PurchaseManager: ObservableObject {
 
         hasPro = proUnlocked
         defaults.set(proUnlocked, forKey: Keys.proCache)
+        print("SS_IAP >>> ENTITLEMENTS REFRESH hasPro = \(proUnlocked)")
+        updateDebugMessage("Entitlements refreshed: hasPro=\(proUnlocked)")
     }
 
     private func finishUnfinishedTransactions() async {
@@ -163,8 +205,13 @@ final class PurchaseManager: ObservableObject {
         case .verified(let safe):
             return safe
         case .unverified:
+            print("SS_IAP >>> VERIFICATION FAILURE")
             throw PurchaseError.failedVerification
         }
+    }
+
+    private func updateDebugMessage(_ message: String) {
+        lastStoreKitDebugMessage = message
     }
 }
 
@@ -181,6 +228,6 @@ enum RestoreOutcome {
     case failed(String)
 }
 
-enum PurchaseError: Error {
+enum PurchaseError: Error, Equatable {
     case failedVerification
 }

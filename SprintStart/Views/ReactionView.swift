@@ -39,6 +39,12 @@ struct ReactionView: View {
         }
         return themeColor
     }
+    private var proLockedControls: Bool {
+        !purchaseManager.hasPro
+    }
+    private var interactionLocked: Bool {
+        proLockedControls || isHolding || sequenceActive
+    }
 
     var body: some View {
         ScrollView {
@@ -61,7 +67,7 @@ struct ReactionView: View {
                     startDelay: $appStore.starter.secondDelay,
                     variability: $appStore.starter.variability,
                     timingLocked: $appStore.starter.timingLocked,
-                    interactionLocked: isHolding || sequenceActive
+                    interactionLocked: interactionLocked
                 )
 
                 VStack(spacing: 12) {
@@ -73,8 +79,8 @@ struct ReactionView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(tint: primaryButtonTint))
-                    .disabled(isHolding || sequenceActive)
-                    .opacity((isHolding || sequenceActive) ? 0.55 : 1.0)
+                    .disabled(interactionLocked)
+                    .opacity(interactionLocked ? 0.55 : 1.0)
 
                     Button {
                         cancelSequence()
@@ -85,8 +91,8 @@ struct ReactionView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(tint: .red))
-                    .disabled(appStore.starter.timingLocked || isHolding || sequenceActive)
-                    .opacity((appStore.starter.timingLocked || isHolding || sequenceActive) ? 0.55 : 1.0)
+                    .disabled(appStore.starter.timingLocked || interactionLocked)
+                    .opacity((appStore.starter.timingLocked || interactionLocked) ? 0.55 : 1.0)
                     .accessibilityIdentifier("resetDefaultsButtonReaction")
                 }
 
@@ -165,6 +171,10 @@ struct ReactionView: View {
                     .foregroundStyle(.secondary)
                 Text("Sprint Start Pro")
                     .font(.title2.weight(.semibold))
+                Text("Unlock reaction tracking, history, and timing controls.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             } else if let ms = reactionMS {
                 Text("Release Reaction: \(ms) ms")
                     .font(.system(size: 42, weight: .bold))
@@ -189,7 +199,7 @@ struct ReactionView: View {
                 Button {
                     paywallFeature = .reactionTracking
                 } label: {
-                    Label("Unlock reaction time tracking", systemImage: "lock.fill")
+                    Label("Unlock Sprint Start Pro", systemImage: "lock.fill")
                         .font(.subheadline.weight(.semibold))
                 }
                 .buttonStyle(.bordered)
@@ -248,7 +258,7 @@ struct ReactionView: View {
             .opacity((isHolding || sequenceActive) ? 0.45 : 1.0)
         } else {
             Button {
-                paywallFeature = .sessionHistory
+                paywallFeature = .general
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "chart.line.uptrend.xyaxis")

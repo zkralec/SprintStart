@@ -76,7 +76,7 @@ struct ProPaywallView: View {
 
             HStack(spacing: 10) {
                 tagLabel("One-time purchase")
-                tagLabel(purchaseManager.displayPrice)
+                tagLabel(priceLabelText)
             }
         }
         .frame(maxWidth: .infinity)
@@ -113,6 +113,8 @@ struct ProPaywallView: View {
 
     private var actionSection: some View {
         VStack(spacing: 12) {
+            statusMessageView
+
             Button {
                 Task {
                     let outcome = await purchaseManager.purchasePro()
@@ -128,12 +130,26 @@ struct ProPaywallView: View {
                     }
                 }
             } label: {
-                Text("Unlock Sprint Start Pro • \(purchaseManager.displayPrice)")
+                Text("Unlock Sprint Start Pro • \(priceLabelText)")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LiquidGlassButtonStyle(tint: .black))
-            .disabled(purchaseManager.isPurchasing || purchaseManager.isLoadingProducts)
-            .opacity((purchaseManager.isPurchasing || purchaseManager.isLoadingProducts) ? 0.6 : 1.0)
+            .disabled(!canPurchase)
+            .opacity(canPurchase ? 1.0 : 0.6)
+            .accessibilityIdentifier("proUnlockButton")
+
+            if showsRetryButton {
+                Button {
+                    Task {
+                        await purchaseManager.loadProducts()
+                    }
+                } label: {
+                    Text("Retry")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("proRetryLoadButton")
+            }
 
             Button {
                 Task {
@@ -152,6 +168,7 @@ struct ProPaywallView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
+            .accessibilityIdentifier("proRestoreButton")
 
             Text("One-time purchase. No subscription. Restores across your devices with the same Apple Account.")
                 .font(.footnote)
@@ -159,6 +176,50 @@ struct ProPaywallView: View {
                 .multilineTextAlignment(.center)
         }
         .liquidGlassCard()
+    }
+
+    @ViewBuilder
+    private var statusMessageView: some View {
+        switch purchaseManager.productLoadState {
+        case .idle, .loaded:
+            EmptyView()
+        case .loading:
+            Text("Loading purchase options…")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .accessibilityIdentifier("proIAPStatusMessage")
+        case .empty, .failed:
+            VStack(spacing: 10) {
+                Text("Purchase options are temporarily unavailable.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("proIAPStatusMessage")
+            }
+        }
+    }
+
+    private var showsRetryButton: Bool {
+        switch purchaseManager.productLoadState {
+        case .empty, .failed:
+            return true
+        case .idle, .loading, .loaded:
+            return false
+        }
+    }
+
+    private var canPurchase: Bool {
+        if purchaseManager.isPurchasing || purchaseManager.isLoadingProducts {
+            return false
+        }
+
+        return purchaseManager.productLoadState == .loaded && purchaseManager.proProduct != nil
+    }
+
+    private var priceLabelText: String {
+        purchaseManager.proProduct?.displayPrice ?? "Loading price…"
     }
 
     private func benefitRow(_ text: String) -> some View {
