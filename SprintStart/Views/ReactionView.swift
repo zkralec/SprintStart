@@ -45,11 +45,28 @@ struct ReactionView: View {
     private var interactionLocked: Bool {
         proLockedControls || isHolding || sequenceActive
     }
+    private var recordedReactionValues: [Int] {
+        reactionHistoryStore.entries.compactMap(\.reactionMS)
+    }
+    private var averageReactionValue: Int? {
+        guard !recordedReactionValues.isEmpty else { return nil }
+        return Int(Double(recordedReactionValues.reduce(0, +)) / Double(recordedReactionValues.count))
+    }
+    private var bestReactionValue: Int? {
+        recordedReactionValues.min()
+    }
+    private var totalTrackedReps: Int {
+        recordedReactionValues.count
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: GlassLayout.sectionSpacing) {
                 header
+
+                if purchaseManager.hasPro {
+                    summarySection
+                }
 
                 ZStack {
                     Color.clear
@@ -70,7 +87,7 @@ struct ReactionView: View {
                     interactionLocked: interactionLocked
                 )
 
-                VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     Button {
                         cancelSequence()
                         resetUI()
@@ -81,6 +98,7 @@ struct ReactionView: View {
                     .buttonStyle(LiquidGlassButtonStyle(tint: primaryButtonTint))
                     .disabled(interactionLocked)
                     .opacity(interactionLocked ? 0.55 : 1.0)
+                    .saturation(interactionLocked ? 0.78 : 1.0)
 
                     Button {
                         cancelSequence()
@@ -93,6 +111,7 @@ struct ReactionView: View {
                     .buttonStyle(LiquidGlassButtonStyle(tint: .red))
                     .disabled(appStore.starter.timingLocked || interactionLocked)
                     .opacity((appStore.starter.timingLocked || interactionLocked) ? 0.55 : 1.0)
+                    .saturation((appStore.starter.timingLocked || interactionLocked) ? 0.78 : 1.0)
                     .accessibilityIdentifier("resetDefaultsButtonReaction")
                 }
 
@@ -101,7 +120,7 @@ struct ReactionView: View {
             .padding(GlassLayout.screenPadding)
         }
         .scrollDisabled(isHolding || sequenceActive)
-        .navigationTitle("SprintStart")
+        .navigationTitle("Sprint Start Pro")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -147,18 +166,20 @@ struct ReactionView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("SprintStart")
-                    .font(.title.bold())
-                Text("Reaction Mode")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "hand.point.up.left.fill")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(themeColor)
+        AppSectionHeader(
+            systemName: "hand.point.up.left.fill",
+            tint: themeColor,
+            title: "Reaction Mode",
+            summary: "Train reaction time."
+        )
+        .liquidGlassCard()
+    }
+
+    private var summarySection: some View {
+        HStack(spacing: 12) {
+            summaryStat(title: "Best", value: bestReactionValue.map { "\($0) ms" } ?? "--")
+            summaryStat(title: "Average", value: averageReactionValue.map { "\($0) ms" } ?? "--")
+            summaryStat(title: "Tracked", value: "\(totalTrackedReps)")
         }
         .liquidGlassCard()
     }
@@ -166,41 +187,36 @@ struct ReactionView: View {
     private var contentOverlay: some View {
         VStack(spacing: 12) {
             if !purchaseManager.hasPro {
-                Image(systemName: "lock.fill")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text("Sprint Start Pro")
-                    .font(.title2.weight(.semibold))
-                Text("Unlock reaction tracking, history, and timing controls.")
-                    .font(.subheadline)
+                Text("Track reps, review history, and unlock full timing controls.")
+                    .font(AppTypography.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             } else if let ms = reactionMS {
                 Text("Release Reaction: \(ms) ms")
-                    .font(.system(size: 42, weight: .bold))
+                    .font(AppTypography.metric)
                     .foregroundStyle(themeColor)
             } else if falseStart {
                 Text("False Start")
-                    .font(.system(size: 42, weight: .bold))
+                    .font(AppTypography.metric)
                     .foregroundStyle(.red)
             } else if isHolding {
                 Text("Holding... wait for the start")
-                    .font(.title2)
+                    .font(AppTypography.screenTitle)
             } else if shouldShowUpgradePrompt, !purchaseManager.hasPro {
-                Text("Track each rep with Sprint Start Pro")
-                    .font(.title2.weight(.semibold))
+                Text("Track every rep with Pro")
+                    .font(AppTypography.screenTitle)
                     .multilineTextAlignment(.center)
             } else {
                 Text("Press and hold to arm")
-                    .font(.title2)
+                    .font(AppTypography.screenTitle)
             }
 
             if !purchaseManager.hasPro && !isHolding {
                 Button {
                     paywallFeature = .reactionTracking
                 } label: {
-                    Label("Unlock Sprint Start Pro", systemImage: "lock.fill")
-                        .font(.subheadline.weight(.semibold))
+                    Text("Unlock Pro")
+                        .font(AppTypography.bodyStrong)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -208,13 +224,13 @@ struct ReactionView: View {
 
             if let instructionText {
                 Text(instructionText)
-                    .font(.footnote)
+                    .font(AppTypography.secondary)
                     .foregroundStyle(.secondary)
             }
 
             if purchaseManager.hasPro {
                 Text("Timing is based on the app cue and may vary slightly.")
-                    .font(.caption2)
+                    .font(AppTypography.caption)
                     .foregroundStyle(.tertiary)
             }
         }
@@ -264,7 +280,7 @@ struct ReactionView: View {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .imageScale(.medium)
                     Text("PRO")
-                        .font(.caption2.weight(.bold))
+                        .font(AppTypography.captionEmphasis)
                 }
                 .foregroundStyle(themeColor)
                 .accessibilityLabel("Session History Pro")
@@ -285,7 +301,21 @@ struct ReactionView: View {
         if purchaseManager.hasPro {
             return "Place one or more fingers to arm. Release on the start cue to train your reaction."
         }
-        return "Reaction Mode requires Sprint Start Pro."
+        return "Reaction Mode requires Pro."
+    }
+
+    private func summaryStat(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(AppTypography.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(AppTypography.cardTitle)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .appInsetPanel(tint: themeColor, cornerRadius: 18)
     }
 
     private func beginArmedSequence() {

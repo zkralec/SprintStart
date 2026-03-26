@@ -28,23 +28,17 @@ struct WelcomeModelView: View {
             }
 
             VStack(spacing: 10) {
-                Button {
-                    guard !isContinuing else { return }
-                    isContinuing = true
-                    UserDefaults.standard.set(true, forKey: "hasLaunched")
-                    withAnimation(.easeOut(duration: 0.18)) {
-                        isVisible = false
-                    }
-                } label: {
+                Button(action: continueOnboarding) {
                     Text("Continue")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(tint: themeColor))
+                .contentShape(Capsule())
                 .disabled(isContinuing)
                 .accessibilityIdentifier("onboardingContinueButton")
 
                 Text("You can change audio, appearance, and timing behavior in Settings any time.")
-                    .font(.footnote)
+                    .font(AppTypography.secondary)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -53,6 +47,11 @@ struct WelcomeModelView: View {
             .padding(.bottom, 16)
         }
         .liquidGlassScreenBackground(theme: appStore.settings.theme)
+        .onChange(of: isVisible) {
+            if !isVisible {
+                isContinuing = false
+            }
+        }
     }
 
     private var heroSection: some View {
@@ -64,12 +63,12 @@ struct WelcomeModelView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
             VStack(spacing: 6) {
-                Text("Welcome to SprintStart")
-                    .font(.title.bold())
+                Text("Welcome to Sprint Start Pro")
+                    .font(AppTypography.screenTitle)
                     .multilineTextAlignment(.center)
 
                 Text("Solo sprint start training with race-style cues, clean timing control, and focused reaction work.")
-                    .font(.subheadline)
+                    .font(AppTypography.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -85,7 +84,15 @@ struct WelcomeModelView: View {
     }
 
     private var featureSection: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 12) {
+            AppSectionHeader(
+                systemName: "sparkles",
+                tint: themeColor,
+                title: "What You Can Do",
+                summary: "Core training tools."
+            )
+
+            VStack(spacing: 0) {
             featureRow(
                 systemName: "speaker.wave.3.fill",
                 title: "Race-Style Start Cues",
@@ -109,37 +116,36 @@ struct WelcomeModelView: View {
                 title: "Focused Reaction Practice",
                 subtitle: "Train release timing and get clear feedback on false starts."
             )
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .appInsetPanel(tint: themeColor, cornerRadius: 20)
         }
         .liquidGlassCard()
     }
 
     private var privacySection: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "lock.shield.fill")
-                .font(.headline)
-                .foregroundStyle(themeColor)
-                .frame(width: 22)
-
-            Text("All settings and training data stay on your device.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        AppSectionHeader(
+            systemName: "lock.shield.fill",
+            tint: themeColor,
+            title: "Private by Default",
+            summary: "On-device data."
+        )
         .liquidGlassCard()
     }
 
     private func featureRow(systemName: String, title: String, subtitle: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: systemName)
-                .font(.headline)
+                .font(AppTypography.cardTitle)
                 .foregroundStyle(themeColor)
                 .frame(width: 22)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(AppTypography.bodyStrong)
                 Text(subtitle)
-                    .font(.footnote)
+                    .font(AppTypography.secondary)
                     .foregroundStyle(.secondary)
             }
 
@@ -150,9 +156,27 @@ struct WelcomeModelView: View {
 
     private func introTag(_ text: String) -> some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .font(AppTypography.captionStrong)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(.ultraThinMaterial, in: Capsule())
+    }
+
+    private func continueOnboarding() {
+        guard !isContinuing else { return }
+
+        isContinuing = true
+        UserDefaults.standard.set(true, forKey: "hasLaunched")
+
+        withAnimation(.easeOut(duration: 0.18)) {
+            isVisible = false
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(750))
+            if isVisible {
+                isContinuing = false
+            }
+        }
     }
 }

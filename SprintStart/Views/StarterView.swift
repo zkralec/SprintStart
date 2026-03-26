@@ -69,7 +69,7 @@ struct StarterView: View {
                 .padding(GlassLayout.screenPadding)
             }
         }
-        .navigationTitle("SprintStart")
+        .navigationTitle("Sprint Start Pro")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -109,29 +109,22 @@ struct StarterView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("SprintStart")
-                    .font(.title.bold())
-                Text("Standard Mode")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "speaker.wave.3.fill")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(themeColor)
-        }
+        AppSectionHeader(
+            systemName: "speaker.wave.3.fill",
+            tint: themeColor,
+            title: "Standard Mode",
+            summary: "Practice your start."
+        )
         .liquidGlassCard()
     }
 
     private var controlsSection: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             Button {
                 playStarterSequence()
             } label: {
                 Text(started ? "Sequence Running" : "Start")
-                    .font(.headline)
+                    .font(AppTypography.cardTitle)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LiquidGlassButtonStyle(tint: primaryButtonTint))
@@ -152,6 +145,7 @@ struct StarterView: View {
             .buttonStyle(LiquidGlassButtonStyle(tint: .red))
             .disabled(appStore.starter.timingLocked || started)
             .opacity((appStore.starter.timingLocked || started) ? 0.55 : 1.0)
+            .saturation((appStore.starter.timingLocked || started) ? 0.78 : 1.0)
             .accessibilityLabel("Reset to defaults")
             .accessibilityIdentifier("resetDefaultsButtonStandard")
         }
@@ -296,7 +290,7 @@ private struct CountdownRing: View {
                 .animation(.easeInOut(duration: 0.1), value: remainingTime)
 
             Text("\(Int(remainingTime))")
-                .font(.system(size: lineWidth * 2.2, weight: .bold))
+                .font(.system(size: lineWidth * 2.2, weight: .bold, design: .rounded))
                 .foregroundColor(ringColor)
         }
         .padding(lineWidth / 2)

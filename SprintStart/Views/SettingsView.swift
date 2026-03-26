@@ -9,6 +9,11 @@ import SwiftUI
 import AVFoundation
 
 struct SettingsView: View {
+    private enum ExternalLink {
+        static let privacy = URL(string: "https://zkralec.github.io/sprintstart-site/privacy.html")!
+        static let support = URL(string: "https://zkralec.github.io/sprintstart-site/support.html")!
+    }
+
     @EnvironmentObject var appStore: AppSettingsStore
     @EnvironmentObject var purchaseManager: PurchaseManager
     @Environment(\.colorScheme) private var colorScheme
@@ -27,7 +32,7 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: GlassLayout.sectionSpacing) {
+            VStack(spacing: 16) {
                 proSection
                 audioSection
                 appearanceSection
@@ -48,7 +53,7 @@ struct SettingsView: View {
             ProPaywallView(feature: feature)
                 .environmentObject(purchaseManager)
         }
-        .alert("Sprint Start Pro", isPresented: Binding(
+        .alert("Unlock Pro", isPresented: Binding(
             get: { purchaseMessage != nil },
             set: { if !$0 { purchaseMessage = nil } }
         )) {
@@ -59,25 +64,53 @@ struct SettingsView: View {
     }
 
     private var proSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Sprint Start Pro")
-                    .font(.headline)
-                Spacer()
-                if purchaseManager.hasPro {
-                    Label("Unlocked", systemImage: "checkmark.seal.fill")
-                        .font(.footnote.weight(.semibold))
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                AppIconTile(
+                    systemName: purchaseManager.hasPro ? "checkmark.seal.fill" : "lock.fill",
+                    tint: themeColor,
+                    size: 44
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text("Unlock Pro")
+                            .font(AppTypography.cardTitle)
+
+                        if purchaseManager.hasPro {
+                            AppStatusBadge(text: "Active", tint: themeColor)
+                        }
+                    }
+
+                    Text(proCardSummary)
+                        .font(AppTypography.secondary)
                         .foregroundStyle(.secondary)
-                } else {
-                    Text(purchaseManager.displayPrice)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                if !purchaseManager.hasPro {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(purchaseManager.displayPrice)
+                            .font(AppTypography.bodyStrong)
+                            .foregroundStyle(.primary)
+                        Text("One-time")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
-            Text("Unlock reaction time tracking, session history, and advanced randomness.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if !purchaseManager.hasPro {
+                HStack(spacing: 8) {
+                    AppFeaturePill(text: "Reaction")
+                    AppFeaturePill(text: "History")
+                    AppFeaturePill(text: "Randomness")
+                    AppFeaturePill(text: "Themes")
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
 
             if purchaseManager.hasPro {
                 Button {
@@ -89,35 +122,50 @@ struct SettingsView: View {
                     Text("Restore Purchases")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(LiquidGlassButtonStyle(tint: controlTint))
-            } else {
-                Button {
-                    paywallFeature = .general
-                } label: {
-                    Text("Upgrade to Pro")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(LiquidGlassButtonStyle(tint: controlTint))
-
-                Button {
-                    Task {
-                        let outcome = await purchaseManager.restorePurchases()
-                        handleRestoreOutcome(outcome)
-                    }
-                } label: {
-                    Text("Restore Purchases")
-                        .frame(maxWidth: .infinity)
-                }
                 .buttonStyle(.bordered)
+            } else {
+                HStack(spacing: 10) {
+                    Button {
+                        paywallFeature = .general
+                    } label: {
+                        Text("Unlock Pro")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(LiquidGlassButtonStyle(tint: controlTint))
+                    .accessibilityIdentifier("settingsUpgradeToProButton")
+
+                    Button {
+                        Task {
+                            let outcome = await purchaseManager.restorePurchases()
+                            handleRestoreOutcome(outcome)
+                        }
+                    } label: {
+                        Text("Restore")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
+
         }
         .liquidGlassCard()
     }
 
+    private var proCardSummary: String {
+        if purchaseManager.hasPro {
+            return "Reaction tracking, history, and extra controls are active."
+        }
+        return "Reaction tracking, session history, and more control."
+    }
+
     private var audioSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Audio")
-                .font(.headline)
+            AppSectionHeader(
+                systemName: "speaker.wave.3.fill",
+                tint: themeColor,
+                title: "Audio",
+                summary: "Cues and feedback."
+            )
 
             if purchaseManager.hasPro {
                 Menu {
@@ -179,14 +227,21 @@ struct SettingsView: View {
             .buttonStyle(LiquidGlassButtonStyle(tint: controlTint))
             .disabled(soundTestCooldownRemaining > 0)
             .opacity(soundTestCooldownRemaining > 0 ? 0.65 : 1.0)
+            .saturation(soundTestCooldownRemaining > 0 ? 0.82 : 1.0)
+
+            noteRow("Best timing accuracy comes from the iPhone speaker or wired audio. Bluetooth audio can add delay.")
         }
         .liquidGlassCard()
     }
 
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Appearance")
-                .font(.headline)
+            AppSectionHeader(
+                systemName: "paintbrush.pointed.fill",
+                tint: themeColor,
+                title: "Appearance",
+                summary: "Theme and display."
+            )
 
             if purchaseManager.hasPro {
                 Menu {
@@ -230,38 +285,25 @@ struct SettingsView: View {
     }
 
     private var infoSection: some View {
-        Link(destination: URL(string: "https://zkralec.github.io/sprintstart-site/privacy.html")!) {
-            HStack(spacing: 10) {
-                Text("Privacy Policy")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.primary)
+        VStack(alignment: .leading, spacing: 12) {
+            AppSectionHeader(
+                systemName: "questionmark.circle.fill",
+                tint: themeColor,
+                title: "Help & Privacy",
+                summary: "Support and policy links."
+            )
 
-                Spacer()
-
-                Image(systemName: "arrow.up.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+            VStack(spacing: 10) {
+            Link(destination: ExternalLink.privacy) {
+                infoLinkRow(title: "Privacy Policy")
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                themeColor.opacity(colorScheme == .dark ? 0.14 : 0.12),
-                                themeColor.opacity(colorScheme == .dark ? 0.06 : 0.08)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(themeColor.opacity(colorScheme == .dark ? 0.28 : 0.18), lineWidth: 1)
-            )
+            .accessibilityIdentifier("privacyPolicyLink")
+
+            Link(destination: ExternalLink.support) {
+                infoLinkRow(title: "Support")
+            }
+            .accessibilityIdentifier("supportLink")
+            }
         }
         .liquidGlassCard()
     }
@@ -284,9 +326,7 @@ struct SettingsView: View {
             player?.prepareToPlay()
             player?.play()
             beginSoundTestCooldown()
-        } catch {
-            print("Failed to play sound: \(error)")
-        }
+        } catch {}
     }
 
     private func beginSoundTestCooldown() {
@@ -307,9 +347,9 @@ struct SettingsView: View {
     private func handleRestoreOutcome(_ outcome: RestoreOutcome) {
         switch outcome {
         case .restored:
-            purchaseMessage = "Sprint Start Pro has been restored."
+            purchaseMessage = "Pro has been restored."
         case .nothingToRestore:
-            purchaseMessage = "No previous Sprint Start Pro purchase was found."
+            purchaseMessage = "No previous Pro purchase was found."
         case .failed(let errorMessage):
             purchaseMessage = errorMessage
         }
@@ -328,6 +368,34 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    private func infoLinkRow(title: String) -> some View {
+        HStack(spacing: 10) {
+            Text(title)
+                .font(AppTypography.secondaryStrong)
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            Image(systemName: "arrow.up.right")
+                .font(AppTypography.captionStrong)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .appInsetPanel(tint: themeColor, cornerRadius: 16)
+    }
+
+    private func noteRow(_ text: String) -> some View {
+        Text(text)
+            .font(AppTypography.secondary)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .appInsetPanel(tint: themeColor, cornerRadius: 16)
+    }
+
     private func selectorRow(
         title: String,
         value: String,
@@ -336,10 +404,10 @@ struct SettingsView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(AppTypography.bodyStrong)
                     .foregroundStyle(.primary)
                 Text(value)
-                    .font(.footnote)
+                    .font(AppTypography.secondary)
                     .foregroundStyle(.secondary)
             }
 
@@ -347,36 +415,19 @@ struct SettingsView: View {
 
             if showsProBadge {
                 Text("PRO")
-                    .font(.caption2.weight(.bold))
+                    .font(AppTypography.captionEmphasis)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(.ultraThinMaterial, in: Capsule())
             }
 
             Image(systemName: "chevron.up.chevron.down")
-                .font(.caption.weight(.semibold))
+                .font(AppTypography.captionStrong)
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            themeColor.opacity(colorScheme == .dark ? 0.18 : 0.16),
-                            themeColor.opacity(colorScheme == .dark ? 0.08 : 0.10)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(themeColor.opacity(colorScheme == .dark ? 0.35 : 0.22), lineWidth: 1)
-        )
+        .appInsetPanel(tint: themeColor)
     }
 
     private func toggleRow(
@@ -387,17 +438,17 @@ struct SettingsView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(AppTypography.bodyStrong)
                     .foregroundStyle(.primary)
                 Text(isOn ? "On" : "Off")
-                    .font(.footnote)
+                    .font(AppTypography.secondary)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
             Image(systemName: symbol)
-                .font(.subheadline.weight(.semibold))
+                .font(AppTypography.bodyStrong)
                 .foregroundStyle(themeColor)
 
             Capsule()
@@ -412,24 +463,7 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            themeColor.opacity(colorScheme == .dark ? 0.18 : 0.16),
-                            themeColor.opacity(colorScheme == .dark ? 0.08 : 0.10)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(themeColor.opacity(colorScheme == .dark ? 0.35 : 0.22), lineWidth: 1)
-        )
+        .appInsetPanel(tint: themeColor)
     }
 }
 

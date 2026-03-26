@@ -54,16 +54,16 @@ enum StarterSoundOption: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .starterGun1: return "Starter gun 1"
-        case .starterGun2: return "Starter gun 2"
-        case .starterGun3: return "Starter gun 3"
-        case .starterGun4: return "Starter gun 4"
-        case .electronicStarter1: return "Electronic starter 1"
-        case .whistle1: return "Whistle 1"
-        case .whistle2: return "Whistle 2"
-        case .whistle3: return "Whistle 3"
-        case .whistle4: return "Whistle 4"
-        case .clap1: return "Clap 1"
+        case .starterGun1: return "Classic Pistol"
+        case .starterGun2: return "Sharp Pistol"
+        case .starterGun3: return "Track Pistol"
+        case .starterGun4: return "Deep Pistol"
+        case .electronicStarter1: return "Electronic Beep"
+        case .whistle1: return "Short Whistle"
+        case .whistle2: return "Sharp Whistle"
+        case .whistle3: return "Open Whistle"
+        case .whistle4: return "Long Whistle"
+        case .clap1: return "Hand Clap"
         }
     }
 

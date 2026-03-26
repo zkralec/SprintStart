@@ -57,29 +57,24 @@ struct WelcomeView: View {
     }
 
     private var splashScreen: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 14) {
             Image("AppLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 96, height: 96)
+                .frame(width: 88, height: 88)
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
-            VStack(spacing: 8) {
-                Text("SprintStart")
-                    .font(.title.weight(.bold))
+            VStack(spacing: 6) {
+                Text("Sprint Start Pro")
+                    .font(AppTypography.screenTitle)
 
-                Text("Solo sprint start training with race-style cues and focused reaction work.")
-                    .font(.subheadline)
+                Text("Solo sprint start training.")
+                    .font(AppTypography.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-
-            HStack(spacing: 10) {
-                splashTag("Random Starts")
-                splashTag("Reaction Training")
-                splashTag("Private Data")
-            }
         }
+        .padding(.horizontal, 28)
         .padding(.horizontal, GlassLayout.screenPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -89,14 +84,6 @@ struct WelcomeView: View {
         withAnimation(.easeOut(duration: 0.18)) {
             isShowingLaunchOverlay = false
         }
-    }
-
-    private func splashTag(_ text: String) -> some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(.ultraThinMaterial, in: Capsule())
     }
 }
 

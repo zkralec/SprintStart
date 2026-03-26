@@ -14,6 +14,7 @@ struct TimingControlsView: View {
     @Binding var timingLocked: Bool
     var interactionLocked = false
 
+    @EnvironmentObject private var appStore: AppSettingsStore
     @EnvironmentObject private var purchaseManager: PurchaseManager
 
     @State private var showVariabilityHelp = false
@@ -23,7 +24,7 @@ struct TimingControlsView: View {
         VStack(spacing: 14) {
             HStack {
                 Text("Timing")
-                    .font(.subheadline.weight(.semibold))
+                    .font(AppTypography.bodyStrong)
                     .foregroundStyle(.secondary)
 
                 Spacer()
@@ -34,7 +35,7 @@ struct TimingControlsView: View {
                     }
                 } label: {
                     Image(systemName: timingLocked ? "lock.fill" : "lock.open")
-                        .font(.subheadline.weight(.semibold))
+                        .font(AppTypography.bodyStrong)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
@@ -65,7 +66,7 @@ struct TimingControlsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Variability")
-                        .font(.subheadline.weight(.semibold))
+                        .font(AppTypography.bodyStrong)
                         .foregroundStyle(.secondary)
 
                     Spacer()
@@ -76,7 +77,7 @@ struct TimingControlsView: View {
                         }
                     } label: {
                         Image(systemName: showVariabilityHelp ? "questionmark.circle.fill" : "questionmark.circle")
-                            .font(.subheadline.weight(.semibold))
+                            .font(AppTypography.bodyStrong)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
@@ -93,7 +94,7 @@ struct TimingControlsView: View {
 
                 if showVariabilityHelp {
                     Text(variabilityDescription)
-                        .font(.footnote)
+                        .font(AppTypography.secondary)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
@@ -104,8 +105,8 @@ struct TimingControlsView: View {
                     Button {
                         paywallFeature = .advancedRandomness
                     } label: {
-                        Text("Upgrade to Sprint Start Pro for more variability presets.")
-                            .font(.caption)
+                        Text("Upgrade to Pro for more variability presets.")
+                            .font(AppTypography.caption)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
@@ -125,6 +126,10 @@ struct TimingControlsView: View {
         .onChange(of: purchaseManager.hasPro) {
             enforceFreeVariability()
         }
+    }
+
+    private var themeTint: Color {
+        appStore.settings.theme.accentColor
     }
 
     private var variabilityDescription: String {
@@ -182,10 +187,10 @@ struct TimingControlsView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(AppTypography.bodyStrong)
                     .foregroundStyle(.secondary)
                 Text(valueText)
-                    .font(.headline)
+                    .font(AppTypography.cardTitle)
             }
 
             Spacer()
@@ -193,6 +198,9 @@ struct TimingControlsView: View {
             HoldRepeatButton(systemImage: "minus", isDisabled: timingLocked || interactionLocked || !canDecrement, action: decrement)
             HoldRepeatButton(systemImage: "plus", isDisabled: timingLocked || interactionLocked || !canIncrement, action: increment)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .appInsetPanel(tint: themeTint)
         .opacity((timingLocked || interactionLocked) ? 0.7 : 1.0)
     }
 
@@ -213,7 +221,7 @@ private struct HoldRepeatButton: View {
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.callout.weight(.bold))
+            .font(AppTypography.bodyStrong)
             .frame(width: 30, height: 30)
             .background(.ultraThinMaterial, in: Circle())
             .overlay(

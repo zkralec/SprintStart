@@ -120,24 +120,31 @@ struct SessionHistoryView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Session History")
-                .font(.title2.bold())
-            Text("Track reaction trends over time and review recent attempts.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        AppSectionHeader(
+            systemName: "chart.line.uptrend.xyaxis",
+            tint: appStore.settings.theme.accentColor,
+            title: "Session History",
+            summary: "Review your sessions."
+        )
         .liquidGlassCard()
     }
 
     private var rangePicker: some View {
-        Picker("History Range", selection: $selectedRange) {
-            ForEach(HistoryRange.allCases) { range in
-                Text(range.title).tag(range)
+        VStack(alignment: .leading, spacing: 12) {
+            AppSectionHeader(
+                systemName: "calendar",
+                tint: appStore.settings.theme.accentColor,
+                title: "Range",
+                summary: "Pick a window."
+            )
+
+            Picker("History Range", selection: $selectedRange) {
+                ForEach(HistoryRange.allCases) { range in
+                    Text(range.title).tag(range)
+                }
             }
+            .pickerStyle(.segmented)
         }
-        .pickerStyle(.segmented)
         .liquidGlassCard()
     }
 
@@ -152,21 +159,25 @@ struct SessionHistoryView: View {
 
     private var chartSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Reaction Trend")
-                .font(.headline)
+            AppSectionHeader(
+                systemName: "waveform.path.ecg",
+                tint: appStore.settings.theme.accentColor,
+                title: "Reaction Trend",
+                summary: "See progress."
+            )
 
             if chartPoints.isEmpty {
                 chartPlaceholder(
-                    title: "No tracked reactions yet",
-                    subtitle: "Complete a Reaction Mode attempt to start building your history."
+                    title: "No tracked reps yet",
+                    subtitle: "Complete a few Reaction Mode reps and your trend line will appear here."
                 )
             } else if chartPoints.count == 1 {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("\(chartPoints[0].reactionMS) ms")
-                        .font(.system(size: 36, weight: .bold))
+                        .font(AppTypography.metricCompact)
                         .foregroundStyle(appStore.settings.theme.accentColor)
                     Text("You need at least two tracked attempts in this range to see a trend line.")
-                        .font(.footnote)
+                        .font(AppTypography.secondary)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -202,7 +213,7 @@ struct SessionHistoryView: View {
                                     Text("A\(attemptNumber)")
                                     Text(point.date, format: selectedRange == .day ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day())
                                 }
-                                .font(.caption2)
+                                .font(AppTypography.caption)
                                 .multilineTextAlignment(.center)
                             }
                         }
@@ -222,22 +233,26 @@ struct SessionHistoryView: View {
 
     private var attemptsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Attempts")
-                .font(.headline)
+            AppSectionHeader(
+                systemName: "list.bullet.rectangle",
+                tint: appStore.settings.theme.accentColor,
+                title: "Recent Attempts",
+                summary: "Latest reps."
+            )
 
             if filteredEntries.isEmpty {
-                Text("No attempts are available in this time range.")
-                    .font(.footnote)
+                Text("No attempts are in this range yet. Try a wider range or complete a few more reps.")
+                    .font(AppTypography.secondary)
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(filteredEntries.suffix(8).reversed()) { entry in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.falseStart ? "False Start" : "\(entry.reactionMS ?? 0) ms")
-                                .font(.subheadline.weight(.semibold))
+                                .font(AppTypography.bodyStrong)
                                 .foregroundStyle(entry.falseStart ? .red : .primary)
                             Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
+                                .font(AppTypography.caption)
                                 .foregroundStyle(.secondary)
                         }
 
@@ -256,11 +271,12 @@ struct SessionHistoryView: View {
 
     private var lockedSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Sprint Start Pro")
-                .font(.headline)
-            Text("Session History is included with Pro so your reaction results and false starts stay organized over time.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            AppSectionHeader(
+                systemName: "lock.fill",
+                tint: appStore.settings.theme.accentColor,
+                title: "Unlock Pro",
+                summary: "History is part of Pro."
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlassCard()
@@ -269,20 +285,23 @@ struct SessionHistoryView: View {
     private func historyStat(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption)
+                .font(AppTypography.caption)
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.headline.weight(.semibold))
+                .font(AppTypography.cardTitle)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .appInsetPanel(tint: appStore.settings.theme.accentColor, cornerRadius: 18)
     }
 
     private func chartPlaceholder(title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(AppTypography.bodyStrong)
             Text(subtitle)
-                .font(.footnote)
+                .font(AppTypography.secondary)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -18,7 +18,7 @@ enum ProFeature: String, Identifiable {
     var title: String {
         switch self {
         case .general:
-            return "Sprint Start Pro"
+            return "Unlock Pro"
         case .reactionTracking:
             return "Reaction Tracking"
         case .sessionHistory:

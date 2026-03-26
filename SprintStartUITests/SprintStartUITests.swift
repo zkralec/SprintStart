@@ -48,6 +48,21 @@ final class SprintStartUITests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsShowsPrivacyAndSupportLinks() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched"]
+        app.launch()
+
+        let settingsButton = app.buttons["openSettingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 2.0))
+        settingsButton.tap()
+
+        XCTAssertTrue(app.scrollViews["settingsScreen"].waitForExistence(timeout: 2.0))
+        XCTAssertTrue(app.staticTexts["Privacy Policy"].waitForExistence(timeout: 2.0))
+        XCTAssertTrue(app.staticTexts["Support"].waitForExistence(timeout: 2.0))
+    }
+
+    @MainActor
     func testTimingLockDisablesResetDefaults() throws {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched"]
@@ -68,26 +83,30 @@ final class SprintStartUITests: XCTestCase {
     @MainActor
     func testAdvancedRandomnessPresentsProPaywall() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched"]
+        app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched", "-resetProPurchaseState", "-forceFreeTierForUITests"]
         app.launch()
 
         let mediumButton = app.buttons["Med"]
         XCTAssertTrue(mediumButton.waitForExistence(timeout: 2.0))
         mediumButton.tap()
 
-        let upgradeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Unlock Sprint Start Pro")).firstMatch
+        let upgradeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Unlock Pro")).firstMatch
         XCTAssertTrue(upgradeButton.waitForExistence(timeout: 2.0))
     }
 
     @MainActor
     func testProPaywallShowsUnlockAndRestoreButtons() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched"]
+        app.launchArguments += ["-uiTesting", "-skipSplash", "-markLaunched", "-resetProPurchaseState", "-forceFreeTierForUITests"]
         app.launch()
 
-        let mediumButton = app.buttons["Med"]
-        XCTAssertTrue(mediumButton.waitForExistence(timeout: 2.0))
-        mediumButton.tap()
+        let settingsButton = app.buttons["openSettingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 2.0))
+        settingsButton.tap()
+
+        let upgradeButton = app.buttons["settingsUpgradeToProButton"]
+        XCTAssertTrue(upgradeButton.waitForExistence(timeout: 2.0))
+        upgradeButton.tap()
 
         XCTAssertTrue(app.buttons["proUnlockButton"].waitForExistence(timeout: 2.0))
         XCTAssertTrue(app.buttons["proRestoreButton"].waitForExistence(timeout: 2.0))

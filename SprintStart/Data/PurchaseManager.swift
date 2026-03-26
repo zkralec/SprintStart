@@ -26,10 +26,10 @@ final class PurchaseManager: ObservableObject {
     @Published private(set) var isPurchasing = false
     @Published private(set) var hasCompletedInitialLoad = false
     @Published private(set) var productLoadState: ProductLoadState = .idle
-    @Published private(set) var lastStoreKitDebugMessage: String = ""
     @Published var lastErrorMessage: String?
 
     private let defaults: UserDefaults
+    private let forceFreeTierForUITests: Bool
     private var updatesTask: Task<Void, Never>?
 
     private enum Keys {
@@ -38,12 +38,19 @@ final class PurchaseManager: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.hasPro = defaults.bool(forKey: Keys.proCache)
+        let launchArguments = ProcessInfo.processInfo.arguments
+        self.forceFreeTierForUITests = launchArguments.contains("-forceFreeTierForUITests")
+        if launchArguments.contains("-resetProPurchaseState") {
+            defaults.removeObject(forKey: Keys.proCache)
+        }
+        self.hasPro = forceFreeTierForUITests ? false : defaults.bool(forKey: Keys.proCache)
 
         updatesTask = observeTransactionUpdates()
 
         Task {
-            await syncEntitlementsAtLaunch()
+            if !forceFreeTierForUITests {
+                await syncEntitlementsAtLaunch()
+            }
             await loadProducts()
             hasCompletedInitialLoad = true
         }
@@ -65,37 +72,27 @@ final class PurchaseManager: ObservableObject {
         let requestedIDs = [Self.productID]
         isLoadingProducts = true
         productLoadState = .loading
-        updateDebugMessage("Loading products")
-        print("SS_IAP >>> FETCH START")
-        print("SS_IAP >>> FETCH REQUEST IDS = \(requestedIDs)")
         defer { isLoadingProducts = false }
 
         do {
             let fetchedProducts = try await Product.products(for: requestedIDs)
-            print("SS_IAP >>> FETCH COUNT = \(fetchedProducts.count)")
-            print("SS_IAP >>> FETCH IDS = \(fetchedProducts.map(\.id))")
 
             if fetchedProducts.isEmpty {
                 products = []
                 productLoadState = .empty
                 let message = "Purchase options are temporarily unavailable for \(Self.productID)."
                 lastErrorMessage = message
-                updateDebugMessage("Empty product array for \(Self.productID)")
-                print("SS_IAP >>> EMPTY ARRAY")
                 return
             }
 
             products = fetchedProducts
             productLoadState = .loaded
             lastErrorMessage = nil
-            updateDebugMessage("Loaded \(fetchedProducts.count) product(s)")
         } catch {
             products = []
             let friendlyMessage = "Purchase options are temporarily unavailable. Please try again in a moment."
             productLoadState = .failed(friendlyMessage)
             lastErrorMessage = friendlyMessage
-            updateDebugMessage("Fetch failed: \(error.localizedDescription)")
-            print("SS_IAP >>> FETCH ERROR = \(error)")
         }
     }
 
@@ -105,16 +102,11 @@ final class PurchaseManager: ObservableObject {
     }
 
     func purchasePro() async -> PurchaseOutcome {
-        print("SS_IAP >>> PURCHASE TAPPED")
-        updateDebugMessage("Purchase started")
-
         if proProduct == nil {
             await loadProducts()
         }
 
         guard let product = proProduct else {
-            print("SS_IAP >>> PURCHASE LOOKUP FAILED AFTER RELOAD")
-            updateDebugMessage("Purchase lookup failed after reload")
             return .failed("Purchase options are temporarily unavailable. Please try again in a moment.")
         }
 
@@ -126,24 +118,18 @@ final class PurchaseManager: ObservableObject {
 
             switch result {
             case .success(let verification):
-                print("SS_IAP >>> PURCHASE RESULT = success")
                 let transaction = try checkVerified(verification)
                 await refreshEntitlements()
                 await transaction.finish()
                 return .purchased
             case .userCancelled:
-                print("SS_IAP >>> PURCHASE RESULT = userCancelled")
                 return .cancelled
             case .pending:
-                print("SS_IAP >>> PURCHASE RESULT = pending")
                 return .pending
             @unknown default:
-                print("SS_IAP >>> PURCHASE RESULT = unknown")
                 return .failed("Purchase could not be completed.")
             }
         } catch {
-            print("SS_IAP >>> PURCHASE ERROR = \(error)")
-            updateDebugMessage("Purchase failed: \(error.localizedDescription)")
             if let purchaseError = error as? PurchaseError, purchaseError == .failedVerification {
                 return .failed("Purchase verification failed. Please try again.")
             }
@@ -152,21 +138,22 @@ final class PurchaseManager: ObservableObject {
     }
 
     func restorePurchases() async -> RestoreOutcome {
-        print("SS_IAP >>> RESTORE START")
-        updateDebugMessage("Restore started")
         do {
             try await AppStore.sync()
             await refreshEntitlements()
-            print("SS_IAP >>> RESTORE RESULT hasPro = \(hasPro)")
             return hasPro ? .restored : .nothingToRestore
         } catch {
-            print("SS_IAP >>> RESTORE ERROR = \(error)")
-            updateDebugMessage("Restore failed: \(error.localizedDescription)")
             return .failed("Restore failed. Please try again.")
         }
     }
 
     private func refreshEntitlements() async {
+        if forceFreeTierForUITests {
+            hasPro = false
+            defaults.set(false, forKey: Keys.proCache)
+            return
+        }
+
         var proUnlocked = false
 
         for await result in Transaction.currentEntitlements {
@@ -179,8 +166,6 @@ final class PurchaseManager: ObservableObject {
 
         hasPro = proUnlocked
         defaults.set(proUnlocked, forKey: Keys.proCache)
-        print("SS_IAP >>> ENTITLEMENTS REFRESH hasPro = \(proUnlocked)")
-        updateDebugMessage("Entitlements refreshed: hasPro=\(proUnlocked)")
     }
 
     private func finishUnfinishedTransactions() async {
@@ -205,13 +190,8 @@ final class PurchaseManager: ObservableObject {
         case .verified(let safe):
             return safe
         case .unverified:
-            print("SS_IAP >>> VERIFICATION FAILURE")
             throw PurchaseError.failedVerification
         }
-    }
-
-    private func updateDebugMessage(_ message: String) {
-        lastStoreKitDebugMessage = message
     }
 }
 
