@@ -20,18 +20,17 @@ struct ProPaywallView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                Text("Sprint Start Pro")
-                    .font(AppTypography.captionStrong)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 4)
-                heroSection
-                valueSection
+                VStack(spacing: 12) {
+                    heroSection
+                    valueSection
+                    trustSection
+                }
+
                 Spacer(minLength: 0)
-                trustSection
                 actionSection
             }
             .padding(GlassLayout.screenPadding)
-            .navigationTitle("")
+            .navigationTitle("Sprint Start Pro")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -118,11 +117,6 @@ struct ProPaywallView: View {
                     title: "Unlock more control",
                     detail: "Get advanced randomness plus the full sound, voice, and theme setup."
                 )
-            }
-
-            HStack(spacing: 12) {
-                detailBlock(title: "Purchase", value: "One-time")
-                detailBlock(title: "Restore", value: "Included")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -288,21 +282,6 @@ struct ProPaywallView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .appInsetPanel(tint: appStore.settings.theme.accentColor, cornerRadius: 18)
-    }
-
-    private func detailBlock(title: String, value: String) -> some View {
-        VStack(spacing: 4) {
-            Text(title)
-                .font(AppTypography.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(AppTypography.bodyStrong)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .multilineTextAlignment(.center)
         .appInsetPanel(tint: appStore.settings.theme.accentColor, cornerRadius: 18)
     }
 

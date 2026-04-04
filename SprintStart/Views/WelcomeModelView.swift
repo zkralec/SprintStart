@@ -15,36 +15,37 @@ struct WelcomeModelView: View {
     private var themeColor: Color { appStore.settings.theme.accentColor }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 18) {
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                VStack(spacing: 14) {
                     heroSection
                     featureSection
                     privacySection
                 }
                 .padding(.horizontal, GlassLayout.screenPadding)
-                .padding(.top, 24)
-                .padding(.bottom, 20)
-            }
+                .padding(.top, 18)
+                .frame(maxWidth: .infinity)
 
-            VStack(spacing: 10) {
-                Button(action: continueOnboarding) {
-                    Text("Continue")
-                        .frame(maxWidth: .infinity)
+                Spacer(minLength: 10)
+
+                VStack(spacing: 10) {
+                    Button(action: continueOnboarding) {
+                        Text("Continue")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(LiquidGlassButtonStyle(tint: themeColor))
+                    .contentShape(Capsule())
+                    .disabled(isContinuing)
+                    .accessibilityIdentifier("onboardingContinueButton")
+
+                    Text("You can change audio, appearance, and timing behavior in Settings any time.")
+                        .font(AppTypography.secondary)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-                .buttonStyle(LiquidGlassButtonStyle(tint: themeColor))
-                .contentShape(Capsule())
-                .disabled(isContinuing)
-                .accessibilityIdentifier("onboardingContinueButton")
-
-                Text("You can change audio, appearance, and timing behavior in Settings any time.")
-                    .font(AppTypography.secondary)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                .padding(.horizontal, GlassLayout.screenPadding)
+                .padding(.bottom, max(16, geometry.safeAreaInsets.bottom == 0 ? 16 : geometry.safeAreaInsets.bottom))
             }
-            .padding(.horizontal, GlassLayout.screenPadding)
-            .padding(.top, 12)
-            .padding(.bottom, 16)
         }
         .liquidGlassScreenBackground(theme: appStore.settings.theme)
         .onChange(of: isVisible) {
@@ -55,28 +56,28 @@ struct WelcomeModelView: View {
     }
 
     private var heroSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Image("AppLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 76, height: 76)
+                .frame(width: 68, height: 68)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 Text("Welcome to Sprint Start Pro")
                     .font(AppTypography.screenTitle)
                     .multilineTextAlignment(.center)
 
-                Text("Solo sprint start training with race-style cues, clean timing control, and focused reaction work.")
+                Text("Solo sprint start training with clean cues and focused reaction work.")
                     .font(AppTypography.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
-            HStack(spacing: 10) {
-                introTag("Random Starts")
-                introTag("Reaction Training")
-                introTag("Private Data")
+            HStack(spacing: 8) {
+                introTag("Starts")
+                introTag("Reaction")
+                introTag("Private")
             }
         }
         .frame(maxWidth: .infinity)
@@ -84,7 +85,7 @@ struct WelcomeModelView: View {
     }
 
     private var featureSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             AppSectionHeader(
                 systemName: "sparkles",
                 tint: themeColor,
@@ -93,32 +94,32 @@ struct WelcomeModelView: View {
             )
 
             VStack(spacing: 0) {
-            featureRow(
-                systemName: "speaker.wave.3.fill",
-                title: "Race-Style Start Cues",
-                subtitle: "Use voice, sound, and haptic cues to simulate a clean solo start."
-            )
+                featureRow(
+                    systemName: "speaker.wave.3.fill",
+                    title: "Race-Style Cues",
+                    subtitle: "Voice, sound, and haptics."
+                )
 
-            Divider()
-                .padding(.leading, 52)
+                Divider()
+                    .padding(.leading, 52)
 
-            featureRow(
-                systemName: "timer",
-                title: "Simple Timing Control",
-                subtitle: "Adjust mark, set, and variability to match your training session."
-            )
+                featureRow(
+                    systemName: "timer",
+                    title: "Timing Control",
+                    subtitle: "Adjust mark, set, and randomness."
+                )
 
-            Divider()
-                .padding(.leading, 52)
+                Divider()
+                    .padding(.leading, 52)
 
-            featureRow(
-                systemName: "hand.point.up.left.fill",
-                title: "Focused Reaction Practice",
-                subtitle: "Train release timing and get clear feedback on false starts."
-            )
+                featureRow(
+                    systemName: "hand.point.up.left.fill",
+                    title: "Reaction Practice",
+                    subtitle: "Train release timing and false starts."
+                )
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
             .appInsetPanel(tint: themeColor, cornerRadius: 20)
         }
         .liquidGlassCard()
@@ -151,7 +152,7 @@ struct WelcomeModelView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 7)
     }
 
     private func introTag(_ text: String) -> some View {

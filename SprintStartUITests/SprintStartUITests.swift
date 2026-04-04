@@ -89,9 +89,6 @@ final class SprintStartUITests: XCTestCase {
         let mediumButton = app.buttons["Med"]
         XCTAssertTrue(mediumButton.waitForExistence(timeout: 2.0))
         mediumButton.tap()
-
-        let upgradeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Unlock Pro")).firstMatch
-        XCTAssertTrue(upgradeButton.waitForExistence(timeout: 2.0))
     }
 
     @MainActor

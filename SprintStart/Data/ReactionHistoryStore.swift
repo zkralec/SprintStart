@@ -49,6 +49,15 @@ final class ReactionHistoryStore: ObservableObject {
         trim()
     }
 
+    func deleteEntry(id: UUID) {
+        entries.removeAll { $0.id == id }
+    }
+
+    func deleteLastEntry() {
+        guard !entries.isEmpty else { return }
+        entries.removeFirst()
+    }
+
     private func trim() {
         if entries.count > Keys.maxEntries {
             entries = Array(entries.prefix(Keys.maxEntries))

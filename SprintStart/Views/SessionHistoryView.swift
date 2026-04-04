@@ -9,6 +9,9 @@ import SwiftUI
 import Charts
 
 struct SessionHistoryView: View {
+    private static let recentAttemptsPreviewCount = 5
+    private static let detailedAttemptsCount = 20
+
     private enum HistoryRange: String, CaseIterable, Identifiable {
         case day
         case week
@@ -50,6 +53,7 @@ struct SessionHistoryView: View {
     @EnvironmentObject private var reactionHistoryStore: ReactionHistoryStore
 
     @State private var selectedRange: HistoryRange = .month
+    @State private var showAllAttempts = false
 
     private struct ChartPoint: Identifiable {
         let id: UUID
@@ -87,6 +91,14 @@ struct SessionHistoryView: View {
         filteredEntries.filter(\.falseStart).count
     }
 
+    private var recentAttemptsPreview: [ReactionHistoryEntry] {
+        Array(filteredEntries.suffix(Self.recentAttemptsPreviewCount).reversed())
+    }
+
+    private var selectedRangeLowerBound: Date? {
+        selectedRange.lowerBound(from: .now)
+    }
+
     private var averageReaction: Int? {
         let results = reactionEntries.compactMap(\.reactionMS)
         guard !results.isEmpty else { return nil }
@@ -117,6 +129,14 @@ struct SessionHistoryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .liquidGlassScreenBackground(theme: appStore.settings.theme)
+        .sheet(isPresented: $showAllAttempts) {
+            AttemptsDetailView(
+                lowerBound: selectedRangeLowerBound,
+                rangeTitle: selectedRange.title
+            )
+            .environmentObject(appStore)
+            .environmentObject(reactionHistoryStore)
+        }
     }
 
     private var header: some View {
@@ -238,30 +258,35 @@ struct SessionHistoryView: View {
                 tint: appStore.settings.theme.accentColor,
                 title: "Recent Attempts",
                 summary: "Latest reps."
-            )
+            ) {
+                if filteredEntries.count > Self.recentAttemptsPreviewCount {
+                    Button("View All") {
+                        showAllAttempts = true
+                    }
+                    .font(AppTypography.secondaryStrong)
+                }
+            }
 
             if filteredEntries.isEmpty {
                 Text("No attempts are in this range yet. Try a wider range or complete a few more reps.")
                     .font(AppTypography.secondary)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(filteredEntries.suffix(8).reversed()) { entry in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.falseStart ? "False Start" : "\(entry.reactionMS ?? 0) ms")
-                                .font(AppTypography.bodyStrong)
-                                .foregroundStyle(entry.falseStart ? .red : .primary)
-                            Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                                .font(AppTypography.caption)
-                                .foregroundStyle(.secondary)
+                ForEach(recentAttemptsPreview) { entry in
+                    attemptRow(entry)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                reactionHistoryStore.deleteEntry(id: entry.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
+                }
 
-                        Spacer()
-
-                        Image(systemName: entry.falseStart ? "xmark.circle.fill" : "checkmark.circle.fill")
-                            .foregroundStyle(entry.falseStart ? .red : appStore.settings.theme.accentColor)
-                    }
-                    .padding(.vertical, 2)
+                if filteredEntries.count > Self.recentAttemptsPreviewCount {
+                    Text("Showing latest \(Self.recentAttemptsPreviewCount)")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -322,6 +347,94 @@ struct SessionHistoryView: View {
 
     private func chartPoint(for attemptNumber: Int) -> ChartPoint? {
         chartPoints.first { $0.attemptNumber == attemptNumber }
+    }
+
+    private func attemptRow(_ entry: ReactionHistoryEntry) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.falseStart ? "False Start" : "\(entry.reactionMS ?? 0) ms")
+                    .font(AppTypography.bodyStrong)
+                    .foregroundStyle(entry.falseStart ? .red : .primary)
+                Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                    .font(AppTypography.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: entry.falseStart ? "xmark.circle.fill" : "checkmark.circle.fill")
+                .foregroundStyle(entry.falseStart ? .red : appStore.settings.theme.accentColor)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct AttemptsDetailView: View {
+    private static let maxDetailedAttempts = 20
+
+    let lowerBound: Date?
+    let rangeTitle: String
+
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var appStore: AppSettingsStore
+    @EnvironmentObject private var reactionHistoryStore: ReactionHistoryStore
+
+    private var entries: [ReactionHistoryEntry] {
+        let filtered = reactionHistoryStore.entries.filter { entry in
+            guard let lowerBound else { return true }
+            return entry.date >= lowerBound
+        }
+        return Array(filtered.prefix(Self.maxDetailedAttempts))
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if entries.isEmpty {
+                    Text("No attempts are available in this range.")
+                        .font(AppTypography.secondary)
+                        .foregroundStyle(.secondary)
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach(entries) { entry in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.falseStart ? "False Start" : "\(entry.reactionMS ?? 0) ms")
+                                    .font(AppTypography.bodyStrong)
+                                    .foregroundStyle(entry.falseStart ? .red : .primary)
+                                Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                                    .font(AppTypography.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: entry.falseStart ? "xmark.circle.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(entry.falseStart ? .red : appStore.settings.theme.accentColor)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                reactionHistoryStore.deleteEntry(id: entry.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .liquidGlassScreenBackground(theme: appStore.settings.theme)
+            .navigationTitle("Attempts \(rangeTitle)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -58,6 +58,9 @@ struct ReactionView: View {
     private var totalTrackedReps: Int {
         recordedReactionValues.count
     }
+    private var hasHistoryEntries: Bool {
+        !reactionHistoryStore.entries.isEmpty
+    }
 
     var body: some View {
         ScrollView {
@@ -99,6 +102,20 @@ struct ReactionView: View {
                     .disabled(interactionLocked)
                     .opacity(interactionLocked ? 0.55 : 1.0)
                     .saturation(interactionLocked ? 0.78 : 1.0)
+
+                    if purchaseManager.hasPro && hasHistoryEntries {
+                        Button {
+                            reactionHistoryStore.deleteLastEntry()
+                            resetUI()
+                        } label: {
+                            Label("Delete Last Attempt", systemImage: "trash")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.orange)
+                        .disabled(interactionLocked)
+                        .opacity(interactionLocked ? 0.55 : 1.0)
+                    }
 
                     Button {
                         cancelSequence()
