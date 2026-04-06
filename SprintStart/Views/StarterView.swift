@@ -299,3 +299,12 @@ private struct CountdownRing: View {
         .accessibilityValue(Text("\(Int(remainingTime)) seconds remaining"))
     }
 }
+
+#Preview {
+    NavigationStack {
+        StarterView()
+            .environmentObject(AppSettingsStore())
+            .environmentObject(PurchaseManager())
+            .environmentObject(ReactionHistoryStore())
+    }
+}

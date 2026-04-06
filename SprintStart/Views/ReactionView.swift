@@ -45,6 +45,15 @@ struct ReactionView: View {
     private var interactionLocked: Bool {
         proLockedControls || isHolding || sequenceActive
     }
+    private var resetReactionDisabled: Bool {
+        isHolding || sequenceActive
+    }
+    private var resetDefaultsDisabled: Bool {
+        appStore.starter.timingLocked || isHolding || sequenceActive
+    }
+    private var bottomButtonsAppearDisabled: Bool {
+        !purchaseManager.hasPro
+    }
     private var recordedReactionValues: [Int] {
         reactionHistoryStore.entries.compactMap(\.reactionMS)
     }
@@ -67,9 +76,7 @@ struct ReactionView: View {
             VStack(spacing: GlassLayout.sectionSpacing) {
                 header
 
-                if purchaseManager.hasPro {
-                    summarySection
-                }
+                lockableSummarySection
 
                 ZStack {
                     Color.clear
@@ -82,53 +89,30 @@ struct ReactionView: View {
                 .accessibilityLabel("Reaction zone")
                 .accessibilityHint(reactionAccessibilityHint)
 
-                TimingControlsView(
-                    markDelay: $appStore.starter.firstDelay,
-                    startDelay: $appStore.starter.secondDelay,
-                    variability: $appStore.starter.variability,
-                    timingLocked: $appStore.starter.timingLocked,
-                    interactionLocked: interactionLocked
-                )
+                lockableTimingSection
 
                 VStack(alignment: .leading, spacing: 12) {
                     Button {
-                        cancelSequence()
-                        resetUI()
+                        handleResetReactionTap()
                     } label: {
                         Label("Reset Reaction", systemImage: "arrow.counterclockwise")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(tint: primaryButtonTint))
-                    .disabled(interactionLocked)
-                    .opacity(interactionLocked ? 0.55 : 1.0)
-                    .saturation(interactionLocked ? 0.78 : 1.0)
-
-                    if purchaseManager.hasPro && hasHistoryEntries {
-                        Button {
-                            reactionHistoryStore.deleteLastEntry()
-                            resetUI()
-                        } label: {
-                            Label("Delete Last Attempt", systemImage: "trash")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.orange)
-                        .disabled(interactionLocked)
-                        .opacity(interactionLocked ? 0.55 : 1.0)
-                    }
+                    .disabled(resetReactionDisabled)
+                    .opacity((resetReactionDisabled || bottomButtonsAppearDisabled) ? 0.55 : 1.0)
+                    .saturation((resetReactionDisabled || bottomButtonsAppearDisabled) ? 0.78 : 1.0)
 
                     Button {
-                        cancelSequence()
-                        resetUI()
-                        appStore.resetStarterToDefaults()
+                        handleResetDefaultsTap()
                     } label: {
                         Label("Reset to Defaults", systemImage: "arrow.uturn.backward")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(tint: .red))
-                    .disabled(appStore.starter.timingLocked || interactionLocked)
-                    .opacity((appStore.starter.timingLocked || interactionLocked) ? 0.55 : 1.0)
-                    .saturation((appStore.starter.timingLocked || interactionLocked) ? 0.78 : 1.0)
+                    .disabled(resetDefaultsDisabled)
+                    .opacity((resetDefaultsDisabled || bottomButtonsAppearDisabled) ? 0.55 : 1.0)
+                    .saturation((resetDefaultsDisabled || bottomButtonsAppearDisabled) ? 0.78 : 1.0)
                     .accessibilityIdentifier("resetDefaultsButtonReaction")
                 }
 
@@ -201,13 +185,73 @@ struct ReactionView: View {
         .liquidGlassCard()
     }
 
+    private var lockableSummarySection: some View {
+        summarySection
+            .overlay {
+                if !purchaseManager.hasPro {
+                    Button {
+                        paywallFeature = .reactionTracking
+                    } label: {
+                        Color.clear
+                            .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Unlock reaction stats")
+                }
+            }
+    }
+
+    private var lockableTimingSection: some View {
+        TimingControlsView(
+            markDelay: $appStore.starter.firstDelay,
+            startDelay: $appStore.starter.secondDelay,
+            variability: $appStore.starter.variability,
+            timingLocked: $appStore.starter.timingLocked,
+            interactionLocked: interactionLocked
+        )
+        .overlay {
+            if !purchaseManager.hasPro {
+                Button {
+                    paywallFeature = .reactionTracking
+                } label: {
+                    Color.clear
+                        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Unlock reaction timing")
+            }
+        }
+    }
+
+    private var lockedReactionPrompt: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "lock.fill")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(themeColor)
+
+            VStack(spacing: 4) {
+                Text("Unlock Reaction Tracking")
+                    .font(AppTypography.bodyStrong)
+                Text("Press and hold training is available with Pro.")
+                    .font(AppTypography.secondary)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Text("Tap to unlock")
+                .font(AppTypography.captionEmphasis)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial.opacity(0.75), in: Capsule())
+        }
+        .padding(24)
+    }
+
     private var contentOverlay: some View {
         VStack(spacing: 12) {
             if !purchaseManager.hasPro {
-                Text("Track reps, review history, and unlock full timing controls.")
-                    .font(AppTypography.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                lockedReactionPrompt
             } else if let ms = reactionMS {
                 Text("Release Reaction: \(ms) ms")
                     .font(AppTypography.metric)
@@ -226,17 +270,6 @@ struct ReactionView: View {
             } else {
                 Text("Press and hold to arm")
                     .font(AppTypography.screenTitle)
-            }
-
-            if !purchaseManager.hasPro && !isHolding {
-                Button {
-                    paywallFeature = .reactionTracking
-                } label: {
-                    Text("Unlock Pro")
-                        .font(AppTypography.bodyStrong)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
             }
 
             if let instructionText {
@@ -273,6 +306,7 @@ struct ReactionView: View {
                 paywallFeature = .reactionTracking
             } label: {
                 Color.clear
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
@@ -374,6 +408,25 @@ struct ReactionView: View {
         }
         startWork = startItem
         DispatchQueue.main.asyncAfter(deadline: .now() + Double(appStore.starter.firstDelay) + startDelay, execute: startItem)
+    }
+
+    private func handleResetReactionTap() {
+        guard purchaseManager.hasPro else {
+            paywallFeature = .reactionTracking
+            return
+        }
+        cancelSequence()
+        resetUI()
+    }
+
+    private func handleResetDefaultsTap() {
+        guard purchaseManager.hasPro else {
+            paywallFeature = .reactionTracking
+            return
+        }
+        cancelSequence()
+        resetUI()
+        appStore.resetStarterToDefaults()
     }
 
     private func handleRelease() {
