@@ -18,7 +18,7 @@ enum ProductLoadState: Equatable {
 
 @MainActor
 final class PurchaseManager: ObservableObject {
-    static let productID = "com.sprintstart.pro"
+    static let productID = "com.sprintstart.pro.unlock"
 
     @Published private(set) var products: [Product] = []
     @Published private(set) var hasPro: Bool

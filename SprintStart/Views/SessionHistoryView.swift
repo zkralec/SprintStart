@@ -11,6 +11,7 @@ import Charts
 struct SessionHistoryView: View {
     private static let recentAttemptsPreviewCount = 5
     private static let expandedAttemptsCount = 25
+    private static let attemptRowSpacing: CGFloat = 8
 
     private enum HistoryRange: String, CaseIterable, Identifiable {
         case day
@@ -296,18 +297,20 @@ struct SessionHistoryView: View {
                         )
                 }
 
-                ForEach(recentAttemptsPreview) { entry in
-                    attemptSwipeRow(entry)
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity.combined(with: .move(edge: .top)),
-                                removal: .opacity.combined(with: .move(edge: .leading))
+                VStack(spacing: Self.attemptRowSpacing) {
+                    ForEach(recentAttemptsPreview) { entry in
+                        attemptSwipeRow(entry)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .opacity.combined(with: .move(edge: .top)),
+                                    removal: .opacity.combined(with: .move(edge: .leading))
+                                )
                             )
-                        )
+                    }
                 }
 
                 if isAttemptsExpanded {
-                    VStack(spacing: 0) {
+                    VStack(spacing: Self.attemptRowSpacing) {
                         ForEach(overflowAttemptsPreview) { entry in
                             attemptSwipeRow(entry)
                                 .transition(
@@ -318,6 +321,7 @@ struct SessionHistoryView: View {
                                 )
                         }
                     }
+                    .padding(.top, Self.attemptRowSpacing)
                 }
             }
         }
